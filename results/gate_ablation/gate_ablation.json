@@ -1,0 +1,100 @@
+[
+  {
+    "kappa": null,
+    "d0_scale": null,
+    "mean_sigma": 1.0,
+    "rms_phi": 0.015691589710469942,
+    "envelope_pct": 100.0
+  },
+  {
+    "kappa": 0.4,
+    "d0_scale": 0.6,
+    "mean_sigma": 0.6839856068077121,
+    "rms_phi": 0.038621358047359826,
+    "envelope_pct": 61.33333333333333
+  },
+  {
+    "kappa": 0.4,
+    "d0_scale": 0.8,
+    "mean_sigma": 0.8350332678907244,
+    "rms_phi": 0.015784746015092218,
+    "envelope_pct": 99.33333333333333
+  },
+  {
+    "kappa": 0.4,
+    "d0_scale": 1.0,
+    "mean_sigma": 0.9661723660938143,
+    "rms_phi": 0.015710854535435248,
+    "envelope_pct": 100.0
+  },
+  {
+    "kappa": 0.8,
+    "d0_scale": 0.6,
+    "mean_sigma": 0.7338500477863801,
+    "rms_phi": 0.03334506827739613,
+    "envelope_pct": 67.0
+  },
+  {
+    "kappa": 0.8,
+    "d0_scale": 0.8,
+    "mean_sigma": 0.8826562118159048,
+    "rms_phi": 0.01573709081803426,
+    "envelope_pct": 100.0
+  },
+  {
+    "kappa": 0.8,
+    "d0_scale": 1.0,
+    "mean_sigma": 0.9717382685865372,
+    "rms_phi": 0.01570835229370322,
+    "envelope_pct": 100.0
+  },
+  {
+    "kappa": 1.2,
+    "d0_scale": 0.6,
+    "mean_sigma": 0.7766191491820911,
+    "rms_phi": 0.028304571534893307,
+    "envelope_pct": 72.66666666666667
+  },
+  {
+    "kappa": 1.2,
+    "d0_scale": 0.8,
+    "mean_sigma": 0.9076017862207039,
+    "rms_phi": 0.015724465720558828,
+    "envelope_pct": 100.0
+  },
+  {
+    "kappa": 1.2,
+    "d0_scale": 1.0,
+    "mean_sigma": 0.976037964434416,
+    "rms_phi": 0.015705937381650846,
+    "envelope_pct": 100.0
+  },
+  {
+    "kappa": 2.4,
+    "d0_scale": 0.6,
+    "mean_sigma": 0.8540293477461084,
+    "rms_phi": 0.018961857734849482,
+    "envelope_pct": 85.0
+  },
+  {
+    "kappa": 2.4,
+    "d0_scale": 0.8,
+    "mean_sigma": 0.942716360125609,
+    "rms_phi": 0.015711153814568782,
+    "envelope_pct": 100.0
+  },
+  {
+    "kappa": 2.4,
+    "d0_scale": 1.0,
+    "mean_sigma": 0.9838786960406435,
+    "rms_phi": 0.015701298045679206,
+    "envelope_pct": 100.0
+  },
+  {
+    "kappa": "PID",
+    "d0_scale": "PID",
+    "mean_sigma": null,
+    "rms_phi": 0.025266841189921816,
+    "envelope_pct": 89.0
+  }
+]
