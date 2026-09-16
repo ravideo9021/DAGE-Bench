@@ -26,6 +26,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+rl = ["gymnasium>=0.29"]
 dev = ["pytest>=7.0", "ruff>=0.1"]
 
 [project.scripts]
