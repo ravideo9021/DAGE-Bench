@@ -240,6 +240,16 @@ print(f"Envelope success: {r.envelope_success_rate:.1%}")
 print(f"RMS roll: {r.rms_phi_mean:.4f} rad")
 ```
 
+### Interactive flight console
+
+`dashboard/` contains a browser console that runs this benchmark live: the plant, all five controllers and the trained residual network, ported to TypeScript and verified against NumPy at boot. It includes a real-time 3D landing view, a multi-threaded Monte Carlo runner that reproduces Table III/IV, a live network inspector, and gate and disturbance-model explorers.
+
+```bash
+cd dashboard && npm install && npm run dev
+```
+
+See [`dashboard/README.md`](dashboard/README.md).
+
 ---
 
 ## CLI Reference

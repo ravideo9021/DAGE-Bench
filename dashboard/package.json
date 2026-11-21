@@ -1,20 +1,24 @@
 {
-  "name": "dashboard",
+  "name": "dage-flight-console",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "validate": "tsx scripts/validate.ts",
+    "export-model": "cd .. && python3 dashboard/scripts/export_model.py"
   },
   "dependencies": {
+    "@types/three": "^0.170.0",
     "framer-motion": "^13.3.0",
     "lucide-react": "^1.46.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "recharts": "^2.15.4"
+    "recharts": "^2.15.4",
+    "three": "^0.170.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
@@ -22,6 +26,7 @@
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
+    "tsx": "^4.19.2",
     "typescript": "~6.0.2",
     "vite": "^8.3.0"
   }
