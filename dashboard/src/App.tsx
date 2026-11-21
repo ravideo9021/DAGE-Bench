@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Plane, LayoutGrid, BrainCircuit, ShieldCheck, Waves, BarChart3, BadgeCheck, Sun, Moon, MonitorSmartphone } from 'lucide-react';
+import { Plane, LayoutGrid, BrainCircuit, ShieldCheck, Waves, BarChart3, BadgeCheck, Sun, Moon, MonitorSmartphone, House, BookOpen } from 'lucide-react';
 import FlightView from './views/FlightView';
 import { VerifySheet } from './views/Verify';
 import { runChecks, CHECK_COUNT, type Check } from './sim/checks';
@@ -11,21 +11,25 @@ const ModelView = lazy(() => import('./views/ModelView'));
 const GateView = lazy(() => import('./views/GateView'));
 const PhysicsView = lazy(() => import('./views/PhysicsView'));
 const ResultsView = lazy(() => import('./views/ResultsView'));
+const Overview = lazy(() => import('./views/Overview'));
+const Docs = lazy(() => import('./views/Docs'));
 
 const VIEWS = [
-  { id: 'flight', label: 'Flight', short: 'Flight', icon: Plane, group: 'Simulate' },
-  { id: 'montecarlo', label: 'Monte Carlo', short: 'Batch', icon: LayoutGrid, group: 'Simulate' },
-  { id: 'model', label: 'Network', short: 'Network', icon: BrainCircuit, group: 'Understand' },
-  { id: 'gate', label: 'Safety Gate', short: 'Gate', icon: ShieldCheck, group: 'Understand' },
-  { id: 'physics', label: 'Disturbance', short: 'Physics', icon: Waves, group: 'Understand' },
-  { id: 'results', label: 'Results', short: 'Results', icon: BarChart3, group: 'Publish' },
+  { id: 'overview', label: 'Overview', short: 'Home', icon: House, group: 'Project', tab: true },
+  { id: 'docs', label: 'Documentation', short: 'Docs', icon: BookOpen, group: 'Project', tab: true },
+  { id: 'flight', label: 'Flight', short: 'Flight', icon: Plane, group: 'Simulate', tab: true },
+  { id: 'montecarlo', label: 'Monte Carlo', short: 'Batch', icon: LayoutGrid, group: 'Simulate', tab: true },
+  { id: 'model', label: 'Network', short: 'Network', icon: BrainCircuit, group: 'Understand', tab: true },
+  { id: 'gate', label: 'Safety Gate', short: 'Gate', icon: ShieldCheck, group: 'Understand', tab: false },
+  { id: 'physics', label: 'Disturbance', short: 'Physics', icon: Waves, group: 'Understand', tab: false },
+  { id: 'results', label: 'Results', short: 'Results', icon: BarChart3, group: 'Publish', tab: true },
 ] as const;
 type ViewId = (typeof VIEWS)[number]['id'];
-const GROUPS = ['Simulate', 'Understand', 'Publish'] as const;
+const GROUPS = ['Project', 'Simulate', 'Understand', 'Publish'] as const;
 
 function readHash(): ViewId {
   const h = window.location.hash.replace('#', '') as ViewId;
-  return VIEWS.some((v) => v.id === h) ? h : 'flight';
+  return VIEWS.some((v) => v.id === h) ? h : 'overview';
 }
 
 export default function App() {
@@ -47,7 +51,11 @@ export default function App() {
     return () => { window.removeEventListener('hashchange', onHash); window.removeEventListener('keydown', onKey); };
   }, []);
 
-  const go = (v: ViewId) => { history.replaceState(null, '', `#${v}`); setView(v); };
+  const go = (v: ViewId) => {
+    history.replaceState(null, '', `#${v}`);
+    setView(v);
+    document.querySelector('.main')?.scrollTo({ top: 0 });
+  };
   const changeAppearance = (a: Appearance) => { setAppearance(a); setApp(a); };
   const done = checks.length === CHECK_COUNT;
   const allOk = done && checks.every((c) => c.ok);
@@ -107,6 +115,8 @@ export default function App() {
 
       <main className="main">
         <Suspense fallback={<div className="view-scroll"><span className="spinner" /></div>}>
+          {view === 'overview' && <Overview go={go} />}
+          {view === 'docs' && <Docs />}
           {view === 'flight' && <FlightView />}
           {view === 'montecarlo' && <MonteCarloView />}
           {view === 'model' && <ModelView />}
@@ -117,7 +127,7 @@ export default function App() {
       </main>
 
       <nav className="tabbar" aria-label="Sections">
-        {VIEWS.map((v) => {
+        {VIEWS.filter((v) => v.tab).map((v) => {
           const I = v.icon;
           return (
             <button key={v.id} type="button" aria-current={view === v.id ? 'page' : undefined} onClick={() => go(v.id)}>
