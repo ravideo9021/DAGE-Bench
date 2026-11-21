@@ -1,7 +1,7 @@
+import { theme as TH, CTRL_VAR, rgbOf } from '../ui/theme';
 import { useState } from 'react';
 import { evaluationResults, mismatchResults, type EvalRow } from '../data/results';
-import { CONTROLLERS } from '../sim/trial';
-import { COLORS } from '../engine/flight';
+import { CONTROLLERS, type ControllerId } from '../sim/trial';
 import { MAX_TRAIN_SPEED } from '../sim/physics';
 import { Panel, Seg } from '../ui/kit';
 
@@ -44,26 +44,33 @@ export default function ResultsView() {
       </div>
 
       <div className="grid g-4" style={{ marginBottom: 10 }}>
-        <Finding k="OOD robustness" v={`${resg6.envelope_pct.toFixed(0)}%`} c="var(--ok)"
+        <Finding k="Beyond the training range" v={`${resg6.envelope_pct.toFixed(0)}%`} c="var(--ok)"
           d={<>Res-G at 6.0 m/s, 1.5× beyond the training range. PID reaches {pid6.envelope_pct.toFixed(1)}% and PD {pd6.envelope_pct.toFixed(1)}%.</>} />
-        <Finding k="Roll error reduction" v={`−${((1 - resg3.rms_phi / pid3.rms_phi) * 100).toFixed(0)}%`} c="var(--signal)"
+        <Finding k="Less roll than PID" v={`−${((1 - resg3.rms_phi / pid3.rms_phi) * 100).toFixed(0)}%`} c="var(--signal)"
           d={<>RMS φ vs. PID at 3.0 m/s ({pid3.rms_phi.toFixed(4)} → {resg3.rms_phi.toFixed(4)} rad), in distribution.</>} />
         <Finding k="Model mismatch" v={`${resgM5.envelope_pct.toFixed(1)}%`} c="var(--ok)"
           d={<>Res-G with the plant perturbed (K_φ ×1.4, λ 1.0, n 1.6) at 5 m/s. PID collapses to {pidM5.envelope_pct.toFixed(1)}%.</>} />
-        <Finding k="Gate cost" v={`σ̄ ${resg6.mean_sigma?.toFixed(3)}`} c="var(--text)"
+        <Finding k="Average gate weight" v={`${resg6.mean_sigma?.toFixed(3)}`} c="var(--text)"
           d={<>Mean gate weight at 6 m/s. Res-G stays within the 95% CI of ungated Res-NG in every published cell, so the safety fallback costs no measurable performance.</>} />
       </div>
 
-      <div className="grid g-2" style={{ marginBottom: 10 }}>
-        <Panel tag="TAB-III" title="Table III · main evaluation" right={<Seg options={METRICS.map((x) => ({ value: x.value, label: x.label }))} value={metric} onChange={setMetric} label="Metric" />}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '24px 0 12px', flexWrap: 'wrap' }}>
+        <h2 style={{ margin: 0, fontSize: 19, fontWeight: 700, letterSpacing: '-0.02em' }}>By controller and platform speed</h2>
+        <div style={{ flex: 1 }} />
+        <Seg options={METRICS.map((x) => ({ value: x.value, label: x.label }))} value={metric} onChange={setMetric} label="Metric" style={{ minWidth: 420 }} />
+      </div>
+      <div className="grid g-2" style={{ marginBottom: 16 }}>
+        <Panel tag="TAB-III" title="Main evaluation" right={<span className="badge">Table III</span>}>
           <Heat rows={evaluationResults} speeds={[0, 1.5, 3, 5, 6]} metric={m} controllers={[...CONTROLLERS]} />
+          <p className="field-hint" style={{ margin: '12px 0 0' }}>* Beyond the 0–4 m/s training range. Brackets show the Wilson 95% interval.</p>
         </Panel>
-        <Panel tag="TAB-IV" title="Table IV · disturbance-model mismatch">
+        <Panel tag="TAB-IV" title="With model mismatch" right={<span className="badge">Table IV</span>}>
           <Heat rows={mismatchResults} speeds={[1.5, 3, 5]} metric={m} controllers={['PD', 'PID', 'Res-NG', 'Res-G']} />
+          <p className="field-hint" style={{ margin: '12px 0 0' }}>Plant perturbed: K_φ ×1.40, A_GE ×1.35, L ×1.30, R_z ×1.40, λ 1.0, n 1.6.</p>
         </Panel>
       </div>
 
-      <Panel tag="TAB-III-F" title="Table III · full listing" style={{ marginBottom: 10 }} flush>
+      <Panel tag="TAB-III-F" title="Main evaluation · all metrics" style={{ marginBottom: 10 }} flush>
         <div style={{ overflowX: 'auto' }}>
           <table className="tbl">
             <thead>
@@ -73,7 +80,7 @@ export default function ResultsView() {
               {evaluationResults.map((r) => (
                 <tr key={r.vp + r.controller}>
                   <td>{r.vp.toFixed(1)}{r.vp > MAX_TRAIN_SPEED ? ' *' : ''}</td>
-                  <td style={{ textAlign: 'left' }}><span style={{ display: 'inline-block', width: 7, height: 7, background: COLORS[r.controller as keyof typeof COLORS], marginRight: 8, borderRadius: 1 }} />{r.controller}</td>
+                  <td style={{ textAlign: 'left' }}><span style={{ display: 'inline-block', width: 7, height: 7, background: CTRL_VAR[r.controller as ControllerId], marginRight: 8, borderRadius: 1 }} />{r.controller}</td>
                   <td>{r.rms_phi.toFixed(4)}</td><td>{r.peak_phi.toFixed(4)}</td><td>{r.delta_vy.toFixed(3)}</td><td>{r.abs_vz.toFixed(3)}</td>
                   <td style={{ color: r.envelope_pct >= 99.9 ? 'var(--ok)' : r.envelope_pct >= 80 ? 'var(--warn)' : 'var(--crit)' }}>{r.envelope_pct.toFixed(1)}%</td>
                   <td style={{ color: 'var(--text-3)' }}>[{r.envelope_ci_lo.toFixed(1)}, {r.envelope_ci_hi.toFixed(1)}]</td>
@@ -122,7 +129,8 @@ function Heat({ rows, speeds, metric, controllers }: { rows: EvalRow[]; speeds: 
     return metric.better === 'high' ? t : 1 - t;
   };
   const color = (g: number) => {
-    const bad = [255, 77, 79], mid = [245, 184, 61], good = [61, 214, 140];
+    const th = TH();
+    const bad = rgbOf(th.crit), mid = rgbOf(th.warn), good = rgbOf(th.ok);
     const [a, b, t] = g < 0.5 ? [bad, mid, g * 2] : [mid, good, (g - 0.5) * 2];
     return `rgba(${a.map((x, i) => Math.round(x + (b[i] - x) * t)).join(',')},`;
   };
@@ -140,15 +148,15 @@ function Heat({ rows, speeds, metric, controllers }: { rows: EvalRow[]; speeds: 
 function Line({ c, speeds, rows, metric, color, norm }: { c: string; speeds: number[]; rows: EvalRow[]; metric: (typeof METRICS)[number]; color: (g: number) => string; norm: (v: number) => number }) {
   return (
     <>
-      <div className="mx-rh"><span style={{ width: 8, height: 8, background: COLORS[c as keyof typeof COLORS], borderRadius: 2 }} />{c}</div>
+      <div className="mx-rh"><span style={{ width: 8, height: 8, background: CTRL_VAR[c as ControllerId], borderRadius: 2 }} />{c}</div>
       {speeds.map((vp) => {
         const r = rows.find((x) => x.controller === c && Math.abs(x.vp - vp) < 1e-6);
         if (!r) return <div key={vp} className="mx-cell" style={{ minHeight: 52, opacity: 0.3 }} />;
         const v = r[metric.value] as number;
         const g = norm(v);
         return (
-          <div key={vp} className="mx-cell" style={{ minHeight: 52, background: `${color(g)}0.12)`, borderColor: `${color(g)}0.3)` }}>
-            <div className="pv" style={{ fontSize: 15, color: `${color(g)}1)` }}>{v.toFixed(metric.d)}<small>{metric.unit === '%' ? '%' : ''}</small></div>
+          <div key={vp} className="mx-cell" style={{ minHeight: 52, background: g > 0.97 ? undefined : `${color(g)}${(0.04 + 0.12 * (1 - g)).toFixed(3)})` }}>
+            <div className="pv" style={{ fontSize: 15, color: g > 0.97 ? 'var(--text)' : `${color(g)}1)` }}>{v.toFixed(metric.d)}<small>{metric.unit === '%' ? '%' : ''}</small></div>
             {metric.value === 'envelope_pct' && <div className="ci">[{r.envelope_ci_lo.toFixed(1)}, {r.envelope_ci_hi.toFixed(1)}]</div>}
           </div>
         );

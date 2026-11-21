@@ -1,3 +1,4 @@
+import { theme as TH, alpha, FONT } from '../ui/theme';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Gauge } from 'lucide-react';
 import { getNetwork, FEATURE_NAMES } from '../sim/network';
@@ -165,8 +166,8 @@ export default function ModelView() {
         <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', alignItems: 'flex-end' }}>
           {net.layers.map((_, i) => <WeightMap key={i} idx={i} />)}
           <div className="legend" style={{ flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-            <span><i style={{ background: '#ff6b1a', height: 8, width: 8 }} />positive</span>
-            <span><i style={{ background: '#59a8ff', height: 8, width: 8 }} />negative</span>
+            <span><i style={{ background: TH().accent, height: 8, width: 8 }} />positive</span>
+            <span><i style={{ background: TH().info, height: 8, width: 8 }} />negative</span>
           </div>
         </div>
       </Panel>
@@ -193,7 +194,7 @@ function drawNetwork(ctx: CanvasRenderingContext2D, w: number, h: number, edges:
     if (m < 0.04) continue;
     const [x0, y0] = pos(e.l, e.i);
     const [x1, y1] = pos(e.l + 1, e.j);
-    ctx.strokeStyle = sgl > 0 ? `rgba(255,107,26,${m * 0.42})` : `rgba(89,168,255,${m * 0.42})`;
+    ctx.strokeStyle = sgl > 0 ? alpha(TH().disturb, m * 0.42) : alpha(TH().info, m * 0.42);
     ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
   }
   // neurons
@@ -205,30 +206,30 @@ function drawNetwork(ctx: CanvasRenderingContext2D, w: number, h: number, edges:
       if (l === SIZES.length - 1) a = Math.tanh(a);
       const m = Math.min(1, Math.abs(a));
       const r = l === 4 ? 6 : l === 0 ? 3.4 : 2.8;
-      ctx.fillStyle = '#0b0e11';
+      ctx.fillStyle = TH().card;
       ctx.beginPath(); ctx.arc(x, y, r + 1.2, 0, Math.PI * 2); ctx.fill();
-      ctx.fillStyle = a > 0 ? `rgba(255,107,26,${0.15 + m * 0.85})` : `rgba(89,168,255,${0.15 + m * 0.85})`;
+      ctx.fillStyle = a > 0 ? alpha(TH().disturb, 0.15 + m * 0.85) : alpha(TH().info, 0.15 + m * 0.85);
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
     }
   }
-  ctx.font = '9px "IBM Plex Mono", monospace';
+  ctx.font = `500 10.5px ${FONT}`;
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'right';
   for (let i = 0; i < 24; i++) {
     const [x, y] = pos(0, i);
     const step = Math.floor(i / 6);
-    ctx.fillStyle = i % 6 === 0 ? '#a3adb7' : '#5a6570';
+    ctx.fillStyle = i % 6 === 0 ? TH().text2 : TH().text3;
     ctx.fillText(`${FEATURE_NAMES[i % 6]}${step < 3 ? `[k−${3 - step}]` : '[k]'}`, x - 9, y);
   }
   ctx.textAlign = 'left';
   const outs = ['τ̂_φ DAGE', 'â_GE'];
   for (let i = 0; i < 2; i++) {
     const [x, y] = pos(4, i);
-    ctx.fillStyle = '#e8ecef';
+    ctx.fillStyle = TH().text;
     ctx.fillText(outs[i], x + 12, y);
   }
   ctx.textAlign = 'center';
-  ctx.fillStyle = '#4a545e';
+  ctx.fillStyle = TH().text4;
   const titles = ['input 24', 'dense 64 · tanh', 'dense 64 · tanh', 'dense 32 · tanh', 'linear 2'];
   titles.forEach((t, k) => ctx.fillText(t, colX[k], h - 8));
 }
@@ -238,24 +239,24 @@ function drawInputs(ctx: CanvasRenderingContext2D, w: number, h: number) {
   const L = 44, T = 18, B = 6;
   const cw = (w - L - 8) / 4;
   const chh = (h - T - B) / 6;
-  ctx.font = '9px "IBM Plex Mono", monospace';
+  ctx.font = `500 10.5px ${FONT}`;
   ctx.textBaseline = 'middle';
   for (let s = 0; s < 4; s++) {
-    ctx.fillStyle = '#5a6570';
+    ctx.fillStyle = TH().text3;
     ctx.textAlign = 'center';
     ctx.fillText(s === 3 ? 'k' : `k−${3 - s}`, L + cw * (s + 0.5), 8);
     for (let f = 0; f < 6; f++) {
       const v = a0[s * 6 + f];
       const m = Math.min(1, Math.abs(v) / 3);
-      ctx.fillStyle = v > 0 ? `rgba(255,107,26,${0.08 + m * 0.75})` : `rgba(89,168,255,${0.08 + m * 0.75})`;
+      ctx.fillStyle = v > 0 ? alpha(TH().disturb, 0.08 + m * 0.75) : alpha(TH().info, 0.08 + m * 0.75);
       ctx.fillRect(L + cw * s + 1, T + chh * f + 1, cw - 2, chh - 2);
-      ctx.fillStyle = m > 0.55 ? '#fff' : '#a3adb7';
+      ctx.fillStyle = m > 0.55 ? '#fff' : TH().text2;
       ctx.fillText(v.toFixed(2), L + cw * (s + 0.5), T + chh * (f + 0.5));
     }
   }
   ctx.textAlign = 'right';
   for (let f = 0; f < 6; f++) {
-    ctx.fillStyle = '#a3adb7';
+    ctx.fillStyle = TH().text2;
     ctx.fillText(FEATURE_NAMES[f], L - 8, T + chh * (f + 0.5));
   }
 }
@@ -274,13 +275,13 @@ function WeightMap({ idx }: { idx: number }) {
     for (let i = 0; i < L.nIn; i++) for (let j = 0; j < L.nOut; j++) {
       const v = L.W[i * L.nOut + j] / m;
       const a = Math.min(1, Math.abs(v) * 1.6);
-      ctx.fillStyle = v > 0 ? `rgba(255,107,26,${a})` : `rgba(89,168,255,${a})`;
+      ctx.fillStyle = v > 0 ? alpha(TH().disturb, a) : alpha(TH().info, a);
       ctx.fillRect(j * cell, i * cell, cell, cell);
     }
   }, [L, cell]);
   return (
     <div>
-      <canvas ref={ref} style={{ display: 'block', background: '#07090b', border: '1px solid var(--line-2)', imageRendering: 'pixelated' }} />
+      <canvas ref={ref} style={{ display: 'block', background: TH().bg, border: '1px solid var(--line-2)', imageRendering: 'pixelated' }} />
       <div className="fig-cap">W{idx} · {L.nIn}×{L.nOut} · {(L.W.length + L.b.length).toLocaleString()} params</div>
     </div>
   );
@@ -313,16 +314,16 @@ function Parity({ mode }: { mode: 'open' | 'closed' }) {
     const pw = w - L - R, ph = h - T - B;
     const X = (v: number) => L + ((v - lo) / (hi - lo)) * pw;
     const Y = (v: number) => T + (1 - (v - lo) / (hi - lo)) * ph;
-    ctx.strokeStyle = '#242c35';
+    ctx.strokeStyle = TH().sep;
     ctx.setLineDash([4, 3]);
     ctx.beginPath(); ctx.moveTo(X(lo), Y(lo)); ctx.lineTo(X(hi), Y(hi)); ctx.stroke();
     ctx.setLineDash([]);
     for (const p of data.pts) {
-      ctx.fillStyle = p.ood ? 'rgba(245,184,61,0.55)' : 'rgba(89,168,255,0.45)';
+      ctx.fillStyle = p.ood ? alpha(TH().warn, 0.55) : alpha(TH().info, 0.45);
       ctx.fillRect(X(p.t) - 1.2, Y(p.p) - 1.2, 2.4, 2.4);
     }
-    ctx.font = '9px "IBM Plex Mono", monospace';
-    ctx.fillStyle = '#5a6570';
+    ctx.font = `500 10.5px ${FONT}`;
+    ctx.fillStyle = TH().text3;
     ctx.textAlign = 'center';
     ctx.fillText('τ true (N·m)', L + pw / 2, h - 4);
     for (let k = 0; k <= 4; k++) {
@@ -333,9 +334,9 @@ function Parity({ mode }: { mode: 'open' | 'closed' }) {
       ctx.textAlign = 'center';
     }
     ctx.textAlign = 'left';
-    ctx.fillStyle = 'rgba(89,168,255,0.9)';
+    ctx.fillStyle = alpha(TH().info, 0.9);
     ctx.fillText(`in-dist  R² ${data.id.r2.toFixed(3)}  RMSE ${data.id.rmse.toFixed(4)}`, L + 8, T + 10);
-    ctx.fillStyle = 'rgba(245,184,61,0.95)';
+    ctx.fillStyle = alpha(TH().warn, 0.95);
     ctx.fillText(`OOD>4m/s R² ${data.ood.r2.toFixed(3)}  RMSE ${data.ood.rmse.toFixed(4)}`, L + 8, T + 24);
   });
   useEffect(() => { redraw(); }, [redraw, data]);
@@ -353,21 +354,21 @@ function TrainingCurve() {
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ display: 'block' }}>
       {[0.002, 0.005, 0.01, 0.02, 0.05].map((v) => (
         <g key={v}>
-          <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="#151b21" />
-          <text x={L - 6} y={Y(v) + 3} fill="#5a6570" fontSize={9} textAnchor="end" fontFamily="IBM Plex Mono">{v}</text>
+          <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="var(--grid)" />
+          <text x={L - 6} y={Y(v) + 3} fill="var(--text-3)" fontSize={9} textAnchor="end">{v}</text>
         </g>
       ))}
-      {[1, 10, 20, 30, 38].map((e) => <text key={e} x={X(e)} y={H - 16} fill="#5a6570" fontSize={9} textAnchor="middle" fontFamily="IBM Plex Mono">{e}</text>)}
-      <text x={(L + W - R) / 2} y={H - 3} fill="#5a6570" fontSize={9} textAnchor="middle" fontFamily="IBM Plex Mono">epoch</text>
-      <rect x={X(best.epoch)} y={T} width={X(38) - X(best.epoch)} height={H - T - B} fill="rgba(255,255,255,0.025)" />
-      <line x1={X(best.epoch)} x2={X(best.epoch)} y1={T} y2={H - B} stroke="#3dd68c" strokeDasharray="3 3" />
-      <text x={X(best.epoch) - 4} y={T + 10} fill="#3dd68c" fontSize={9} textAnchor="end" fontFamily="IBM Plex Mono">best ep {best.epoch}</text>
-      <text x={X(38) - 2} y={T + 22} fill="#6f7b87" fontSize={9} textAnchor="end" fontFamily="IBM Plex Mono">patience</text>
-      <polyline points={d.map((p) => `${X(p.epoch)},${Y(p.train)}`).join(' ')} fill="none" stroke="#e8ecef" strokeWidth={1.6} />
-      <polyline points={d.map((p) => `${X(p.epoch)},${Y(p.val)}`).join(' ')} fill="none" stroke="#ff6b1a" strokeWidth={1.6} />
-      <g fontFamily="IBM Plex Mono" fontSize={9}>
-        <rect x={W - R - 96} y={T + 40} width={8} height={2} fill="#e8ecef" /><text x={W - R - 84} y={T + 44} fill="#a3adb7">train</text>
-        <rect x={W - R - 96} y={T + 54} width={8} height={2} fill="#ff6b1a" /><text x={W - R - 84} y={T + 58} fill="#a3adb7">validation</text>
+      {[1, 10, 20, 30, 38].map((e) => <text key={e} x={X(e)} y={H - 16} fill="var(--text-3)" fontSize={9} textAnchor="middle">{e}</text>)}
+      <text x={(L + W - R) / 2} y={H - 3} fill="var(--text-3)" fontSize={9} textAnchor="middle">epoch</text>
+      <rect x={X(best.epoch)} y={T} width={X(38) - X(best.epoch)} height={H - T - B} fill={alpha(TH().text, 0.025)} />
+      <line x1={X(best.epoch)} x2={X(best.epoch)} y1={T} y2={H - B} stroke="var(--ok)" strokeDasharray="3 3" />
+      <text x={X(best.epoch) - 4} y={T + 10} fill="var(--ok)" fontSize={9} textAnchor="end">best ep {best.epoch}</text>
+      <text x={X(38) - 2} y={T + 22} fill="var(--text-3)" fontSize={9} textAnchor="end">patience</text>
+      <polyline points={d.map((p) => `${X(p.epoch)},${Y(p.train)}`).join(' ')} fill="none" stroke="var(--text)" strokeWidth={1.6} />
+      <polyline points={d.map((p) => `${X(p.epoch)},${Y(p.val)}`).join(' ')} fill="none" stroke="var(--accent)" strokeWidth={1.6} />
+      <g fontSize={9}>
+        <rect x={W - R - 96} y={T + 40} width={8} height={2} fill="var(--text)" /><text x={W - R - 84} y={T + 44} fill="var(--text-2)">train</text>
+        <rect x={W - R - 96} y={T + 54} width={8} height={2} fill="var(--accent)" /><text x={W - R - 84} y={T + 58} fill="var(--text-2)">validation</text>
       </g>
     </svg>
   );

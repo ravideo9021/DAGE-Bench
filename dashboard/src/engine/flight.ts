@@ -23,14 +23,6 @@ export interface FlightConfig {
 
 export interface Milestones { finalApproach?: number; groundEffect?: number; gate?: number; touchdown?: number }
 
-export const COLORS: Record<ControllerId, string> = {
-  PD: '#7c8794',
-  PID: '#59a8ff',
-  'PID+DOB': '#e8c547',
-  'Res-NG': '#a78bfa',
-  'Res-G': '#ff6b1a',
-};
-
 export function featureLabel(idx: number): string {
   const step = Math.floor(idx / 6);
   const f = FEATURE_NAMES[idx % 6];
@@ -97,11 +89,11 @@ export class FlightEngine {
     this.cycleTimer = 0;
     this.log = [];
     const P = this.primary.plant;
-    this.push('sys', 'LAUNCH', `Trial #${String(this.cfg.seed).padStart(4, '0')} · ${this.cfg.controller} · v_p ${this.cfg.vp.toFixed(1)} m/s nominal`);
-    this.push('info', 'PLANT', `K_φ ${P.K_phi.toFixed(3)} · A_GE ${P.A_GE.toFixed(2)} · J_x ${P.Jx.toFixed(4)} · v_p ${P.vp.toFixed(2)}`);
-    this.push('info', 'INIT', `z₀ ${SIM.z0.toFixed(2)} m · y₀ ${this.primary.y0.toFixed(2)} m · φ₀ ${(this.primary.phi0 * 57.2958).toFixed(2)}°`);
-    if (this.cfg.vp > MAX_TRAIN_SPEED) this.push('warn', 'OOD', `Platform speed exceeds training envelope [0, ${MAX_TRAIN_SPEED.toFixed(1)}] m/s`);
-    if (this.cfg.mismatch) this.push('warn', 'MISMATCH', `Plant perturbed: K_φ ×${MISMATCH.K_phi_scale} · A_GE ×${MISMATCH.A_GE_scale} · λ ${MISMATCH.lam.toFixed(2)} · n ${MISMATCH.decay_exp}`);
+    this.push('sys', 'Launch', `Seed ${this.cfg.seed} · ${this.cfg.controller} · platform ${this.cfg.vp.toFixed(1)} m/s`);
+    this.push('info', 'Plant sampled', `K_φ ${P.K_phi.toFixed(3)} · A_GE ${P.A_GE.toFixed(2)} · J_x ${P.Jx.toFixed(4)} · v_p ${P.vp.toFixed(2)}`);
+    this.push('info', 'Initial state', `z₀ ${SIM.z0.toFixed(2)} m · y₀ ${this.primary.y0.toFixed(2)} m · φ₀ ${(this.primary.phi0 * 57.2958).toFixed(2)}°`);
+    if (this.cfg.vp > MAX_TRAIN_SPEED) this.push('warn', 'Outside training data', `Platform speed is above the ${MAX_TRAIN_SPEED.toFixed(1)} m/s training range`);
+    if (this.cfg.mismatch) this.push('warn', 'Model mismatch', `Plant perturbed: K_φ ×${MISMATCH.K_phi_scale} · A_GE ×${MISMATCH.A_GE_scale} · λ ${MISMATCH.lam.toFixed(2)} · n ${MISMATCH.decay_exp}`);
     this.emit();
   }
 
@@ -143,31 +135,31 @@ export class FlightEngine {
     const f = this.flags;
     if (!f.capture && Math.abs(s[3]) < 0.25 && Math.abs(s[2]) < 0.6 && t > 0.5) {
       f.capture = true;
-      this.push('ok', 'CAPTURE', `Platform speed matched · Δv_y ${s[3].toFixed(2)} m/s · y_rel ${s[2].toFixed(2)} m`, t);
+      this.push('ok', 'Speed matched', `Relative speed ${s[3].toFixed(2)} m/s, offset ${s[2].toFixed(2)} m`, t);
     }
     if (!f.fa && s[0] < ENVELOPE.final_approach_z && !tr.done) {
       f.fa = true;
       this.milestones.finalApproach = t;
-      this.push('info', 'FINAL', `Final approach · z < ${ENVELOPE.final_approach_z.toFixed(2)} m · DAGE torque ${tr.trueTau().toFixed(4)} N·m`, t);
+      this.push('info', 'Final approach', `Below ${ENVELOPE.final_approach_z.toFixed(1)} m · DAGE torque ${tr.trueTau().toFixed(4)} N·m`, t);
     }
     if (!f.ge && s[0] < tr.plant.R_z && !tr.done) {
       f.ge = true;
       this.milestones.groundEffect = t;
-      this.push('warn', 'GND EFF', `Ground-effect cushion · a_GE ${tr.trueGE().toFixed(2)} m/s² (${((tr.trueGE() / 9.81) * 100).toFixed(0)}% g)`, t);
+      this.push('warn', 'Ground effect', `Cushion lift ${tr.trueGE().toFixed(2)} m/s² (${((tr.trueGE() / 9.81) * 100).toFixed(0)}% of g)`, t);
     }
     if (tr.cfg.controller === 'Res-G') {
       if (!f.gateLow && tr.sigma < 0.9) {
         f.gateLow = true;
         if (!f.gate) { f.gate = true; this.milestones.gate = t; }
-        this.push('warn', 'GATE', `Attenuating residual · σ ${tr.sigma.toFixed(3)} · d ${tr.d.toFixed(2)} > d₀ ${(getNetwork().d0 * this.cfg.d0Scale).toFixed(2)} · driver ${featureLabel(tr.dIdx)}`, t);
+        this.push('warn', 'Gate engaged', `σ ${tr.sigma.toFixed(3)} · distance ${tr.d.toFixed(2)} above ${(getNetwork().d0 * this.cfg.d0Scale).toFixed(2)} · driven by ${featureLabel(tr.dIdx)}`, t);
       } else if (f.gateLow && tr.sigma > 0.995) {
         f.gateLow = false;
-        this.push('ok', 'GATE', `Back in distribution · σ → ${tr.sigma.toFixed(3)}`, t);
+        this.push('ok', 'Gate released', `Back in distribution · σ ${tr.sigma.toFixed(3)}`, t);
       }
     }
     if (!f.roll && s[0] < ENVELOPE.final_approach_z && Math.abs(s[4]) > ENVELOPE.phi_max && !tr.done) {
       f.roll = true;
-      this.push('crit', 'ROLL', `Roll exceedance · |φ| ${(Math.abs(s[4]) * 57.2958).toFixed(2)}° > ${(ENVELOPE.phi_max * 57.2958).toFixed(2)}°`, t);
+      this.push('crit', 'Roll limit exceeded', `|φ| ${(Math.abs(s[4]) * 57.2958).toFixed(2)}° against a ${(ENVELOPE.phi_max * 57.2958).toFixed(2)}° limit`, t);
     }
     for (const trial of this.trials) {
       if (trial.done && !this.finishedReported.has(trial)) {
@@ -175,11 +167,11 @@ export class FlightEngine {
         const r = trial.result!;
         if (trial === tr) {
           this.milestones.touchdown = r.touchdownT;
-          this.push(r.success ? 'ok' : 'crit', 'TOUCHDOWN', `t ${r.touchdownT.toFixed(2)} s · |v_z| ${r.vz.toFixed(3)} · |Δv_y| ${r.dvy.toFixed(3)} · peak |φ| ${r.peakPhi.toFixed(4)} rad`, r.touchdownT);
-          this.push(r.success ? 'ok' : 'crit', 'ENVELOPE', r.success ? 'PASS — all three touchdown criteria satisfied' : `FAIL — ${failReasons(r).join(', ')}`, r.touchdownT);
+          this.push(r.success ? 'ok' : 'crit', 'Touchdown', `${r.touchdownT.toFixed(2)} s · sink ${r.vz.toFixed(3)} m/s · slip ${r.dvy.toFixed(3)} m/s · peak roll ${r.peakPhi.toFixed(4)} rad`, r.touchdownT);
+          this.push(r.success ? 'ok' : 'crit', r.success ? 'Envelope passed' : 'Envelope failed', r.success ? 'All three touchdown criteria met' : `Exceeded: ${failReasons(r).join(', ')}`, r.touchdownT);
           this.emit();
         } else {
-          this.push('sys', trial.cfg.controller.toUpperCase(), `landed t ${r.touchdownT.toFixed(2)} s · ${r.success ? 'PASS' : 'FAIL'} · peak |φ| ${r.peakPhi.toFixed(4)}`, r.touchdownT);
+          this.push('sys', `${trial.cfg.controller} landed`, `${r.success ? 'Passed' : 'Failed'} at ${r.touchdownT.toFixed(2)} s · peak roll ${r.peakPhi.toFixed(4)} rad`, r.touchdownT);
         }
       }
     }
@@ -193,9 +185,9 @@ export class FlightEngine {
 
 export function failReasons(r: { peakPhi: number; vz: number; dvy: number }): string[] {
   const out: string[] = [];
-  if (r.peakPhi > ENVELOPE.phi_max) out.push('roll');
+  if (r.peakPhi > ENVELOPE.phi_max) out.push('roll angle');
   if (r.vz > ENVELOPE.vz_max) out.push('impact speed');
-  if (r.dvy > ENVELOPE.dvy_max) out.push('lateral slip');
+  if (r.dvy > ENVELOPE.dvy_max) out.push('sideways slip');
   return out;
 }
 

@@ -1,3 +1,4 @@
+import { theme as TH, alpha } from '../ui/theme';
 import { useEffect, useMemo, useState } from 'react';
 import { Play } from 'lucide-react';
 import { getNetwork, gateSigma } from '../sim/network';
@@ -124,10 +125,10 @@ export default function GateView() {
           <div className="field" style={{ marginTop: 18 }}>
             <div className="field-l"><span>Attenuated timesteps</span></div>
             <div className="grid g-2" style={{ gap: 8 }}>
-              <div className="hud-card" style={{ background: 'var(--bg-2)' }}><Readout label="In-dist ≤3 m/s" value={stats ? (stats.id.att * 100).toFixed(1) : '…'} unit="%" color="var(--info)" /></div>
-              <div className="hud-card" style={{ background: 'var(--bg-2)' }}><Readout label="OOD ≥6 m/s" value={stats ? (stats.ood.att * 100).toFixed(1) : '…'} unit="%" color="var(--warn)" /></div>
-              <div className="hud-card" style={{ background: 'var(--bg-2)' }}><Readout label="σ̄ in-dist" value={stats ? stats.id.mean.toFixed(3) : '…'} /></div>
-              <div className="hud-card" style={{ background: 'var(--bg-2)' }}><Readout label="σ̄ OOD" value={stats ? stats.ood.mean.toFixed(3) : '…'} /></div>
+              <div className="hud-card" style={{ background: 'var(--card-2)', boxShadow: 'inset 0 0 0 0.5px var(--sep)', borderRadius: 12 }}><Readout label="Within training" value={stats ? (stats.id.att * 100).toFixed(1) : '…'} unit="%" color="var(--info)" /></div>
+              <div className="hud-card" style={{ background: 'var(--card-2)', boxShadow: 'inset 0 0 0 0.5px var(--sep)', borderRadius: 12 }}><Readout label="Beyond training" value={stats ? (stats.ood.att * 100).toFixed(1) : '…'} unit="%" color="var(--warn)" /></div>
+              <div className="hud-card" style={{ background: 'var(--card-2)', boxShadow: 'inset 0 0 0 0.5px var(--sep)', borderRadius: 12 }}><Readout label="Mean σ within" value={stats ? stats.id.mean.toFixed(3) : '…'} /></div>
+              <div className="hud-card" style={{ background: 'var(--card-2)', boxShadow: 'inset 0 0 0 0.5px var(--sep)', borderRadius: 12 }}><Readout label="Mean σ beyond" value={stats ? stats.ood.mean.toFixed(3) : '…'} /></div>
             </div>
           </div>
           <div className="field" style={{ marginTop: 18 }}>
@@ -146,7 +147,7 @@ export default function GateView() {
         </Panel>
 
         <Panel tag="GT-RSP" title="Gate response over observed distance distributions" className="chart-panel" style={{ minHeight: 470 }}
-          right={<div className="legend"><span><i style={{ background: '#59a8ff' }} />in-distribution</span><span><i style={{ background: '#f5b83d' }} />OOD</span><span><i style={{ background: '#ff6b1a' }} />σ(d)</span></div>}>
+          right={<div className="legend"><span><i style={{ background: 'var(--c-pid)' }} />Within training (≤3 m/s)</span><span><i style={{ background: 'var(--warn)' }} />Beyond training (≥6 m/s)</span><span><i style={{ background: 'var(--accent)' }} />Gate σ(d)</span></div>}>
           {data ? <Response data={data} kappa={kappa} d0={d0} /> : <Loading p={prog} />}
         </Panel>
       </div>
@@ -218,27 +219,27 @@ function Response({ data, kappa, d0 }: { data: Collected; kappa: number; d0: num
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ display: 'block' }}>
       {[0, 0.25, 0.5, 0.75, 1].map((s) => (
         <g key={s}>
-          <line x1={L} x2={W - R} y1={Y(s)} y2={Y(s)} stroke="#151b21" />
-          <text x={L - 6} y={Y(s) + 3} fill="#5a6570" fontSize={9} textAnchor="end" fontFamily="IBM Plex Mono">{s.toFixed(2)}</text>
+          <line x1={L} x2={W - R} y1={Y(s)} y2={Y(s)} stroke="var(--grid)" />
+          <text x={L - 6} y={Y(s) + 3} fill="var(--text-3)" fontSize={9} textAnchor="end">{s.toFixed(2)}</text>
         </g>
       ))}
       {Array.from({ length: DMAX / 2 + 1 }, (_, i) => i * 2).map((d) => (
-        <text key={d} x={X(d)} y={H - 18} fill="#5a6570" fontSize={9} textAnchor="middle" fontFamily="IBM Plex Mono">{d}</text>
+        <text key={d} x={X(d)} y={H - 18} fill="var(--text-3)" fontSize={9} textAnchor="middle">{d}</text>
       ))}
-      <text x={(L + W - R) / 2} y={H - 3} fill="#5a6570" fontSize={9.5} textAnchor="middle" fontFamily="IBM Plex Mono">Chebyshev distance d(x) in standardised input space</text>
-      <text x={12} y={(T + H - B) / 2} fill="#5a6570" fontSize={9.5} textAnchor="middle" fontFamily="IBM Plex Mono" transform={`rotate(-90 12 ${(T + H - B) / 2})`}>gate weight σ</text>
-      <text x={W - 12} y={(T + H - B) / 2} fill="#4a545e" fontSize={9.5} textAnchor="middle" fontFamily="IBM Plex Mono" transform={`rotate(90 ${W - 12} ${(T + H - B) / 2})`}>density of observed d</text>
-      <g opacity={0.5}>{bars(data.idHist, '#59a8ff')}</g>
-      <g opacity={0.5}>{bars(data.oodHist, '#f5b83d')}</g>
-      <rect x={X(d0)} y={T} width={X(DMAX) - X(d0)} height={H - T - B} fill="rgba(255,107,26,0.04)" />
-      {[0.4, 2.4].map((k) => <polyline key={k} points={curve(k, d0)} fill="none" stroke="#4a545e" strokeDasharray="3 3" strokeWidth={1} />)}
-      <polyline points={curve(kappa, d0)} fill="none" stroke="#ff6b1a" strokeWidth={2.4} strokeLinejoin="round" />
-      <line x1={X(d0)} x2={X(d0)} y1={T} y2={H - B} stroke="#ff6b1a" strokeDasharray="4 3" />
-      <text x={X(d0) + 6} y={T + 12} fill="#ff6b1a" fontSize={10} fontFamily="IBM Plex Mono">d₀ = {d0.toFixed(2)}</text>
-      <text x={X(d0) + 6} y={T + 25} fill="#6f7b87" fontSize={9} fontFamily="IBM Plex Mono">residual withdrawn →</text>
-      <text x={X(1.7)} y={T + 12} fill="#3dd68c" fontSize={9} fontFamily="IBM Plex Mono">full residual (σ = 1)</text>
-      <text x={X(11.5)} y={Y(gateSigma(11.5, d0, 0.4)) - 6} fill="#4a545e" fontSize={8.5} fontFamily="IBM Plex Mono">κ 0.4</text>
-      <text x={X(11.5)} y={Y(gateSigma(11.5, d0, 2.4)) - 6} fill="#4a545e" fontSize={8.5} fontFamily="IBM Plex Mono">κ 2.4</text>
+      <text x={(L + W - R) / 2} y={H - 3} fill="var(--text-3)" fontSize={9.5} textAnchor="middle">Chebyshev distance d(x) in standardised input space</text>
+      <text x={12} y={(T + H - B) / 2} fill="var(--text-3)" fontSize={9.5} textAnchor="middle" transform={`rotate(-90 12 ${(T + H - B) / 2})`}>gate weight σ</text>
+      <text x={W - 12} y={(T + H - B) / 2} fill="var(--text-4)" fontSize={9.5} textAnchor="middle" transform={`rotate(90 ${W - 12} ${(T + H - B) / 2})`}>density of observed d</text>
+      <g opacity={0.5}>{bars(data.idHist, TH().ctrl.PID)}</g>
+      <g opacity={0.5}>{bars(data.oodHist, TH().warn)}</g>
+      <rect x={X(d0)} y={T} width={X(DMAX) - X(d0)} height={H - T - B} fill={alpha(TH().accent, 0.04)} />
+      {[0.4, 2.4].map((k) => <polyline key={k} points={curve(k, d0)} fill="none" stroke="var(--text-4)" strokeDasharray="3 3" strokeWidth={1} />)}
+      <polyline points={curve(kappa, d0)} fill="none" stroke="var(--accent)" strokeWidth={2.4} strokeLinejoin="round" />
+      <line x1={X(d0)} x2={X(d0)} y1={T} y2={H - B} stroke="var(--accent)" strokeDasharray="4 3" />
+      <text x={X(d0) + 6} y={T + 12} fill="var(--accent)" fontSize={10}>d₀ = {d0.toFixed(2)}</text>
+      <text x={X(d0) + 6} y={T + 25} fill="var(--text-3)" fontSize={9}>residual withdrawn →</text>
+      <text x={X(1.7)} y={T + 12} fill="var(--ok)" fontSize={9}>full residual (σ = 1)</text>
+      <text x={X(11.5)} y={Y(gateSigma(11.5, d0, 0.4)) - 6} fill="var(--text-4)" fontSize={8.5}>κ 0.4</text>
+      <text x={X(11.5)} y={Y(gateSigma(11.5, d0, 2.4)) - 6} fill="var(--text-4)" fontSize={8.5}>κ 2.4</text>
     </svg>
   );
 }
@@ -254,20 +255,20 @@ function Attribution({ data, d0 }: { data: Collected; d0: number }) {
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ display: 'block' }}>
       {[0, 5, 10, 15, 20].filter((v) => v <= vmax).map((v) => (
         <g key={v}>
-          <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="#151b21" />
-          <text x={L - 6} y={Y(v) + 3} fill="#5a6570" fontSize={9} textAnchor="end" fontFamily="IBM Plex Mono">{v}</text>
+          <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="var(--grid)" />
+          <text x={L - 6} y={Y(v) + 3} fill="var(--text-3)" fontSize={9} textAnchor="end">{v}</text>
         </g>
       ))}
       {mean.map((v, i) => (
         <g key={i}>
-          <rect x={L + i * bw + 2} y={Y(peak[i])} width={bw - 4} height={H - B - Y(peak[i])} fill="rgba(245,184,61,0.14)" />
-          <rect x={L + i * bw + 2} y={Y(v)} width={bw - 4} height={H - B - Y(v)} fill={peak[i] > d0 ? '#f5b83d' : '#3b4651'} />
-          <text x={L + i * bw + bw / 2} y={H - B + 10} fill={i % 6 === 0 ? '#a3adb7' : '#5a6570'} fontSize={8} textAnchor="end" fontFamily="IBM Plex Mono" transform={`rotate(-55 ${L + i * bw + bw / 2} ${H - B + 10})`}>{featureLabel(i)}</text>
+          <rect x={L + i * bw + 2} y={Y(peak[i])} width={bw - 4} height={H - B - Y(peak[i])} fill={alpha(TH().warn, 0.14)} />
+          <rect x={L + i * bw + 2} y={Y(v)} width={bw - 4} height={H - B - Y(v)} fill={peak[i] > d0 ? TH().warn : TH().text4} />
+          <text x={L + i * bw + bw / 2} y={H - B + 10} fill={i % 6 === 0 ? TH().text2 : TH().text3} fontSize={8} textAnchor="end" transform={`rotate(-55 ${L + i * bw + bw / 2} ${H - B + 10})`}>{featureLabel(i)}</text>
         </g>
       ))}
-      <line x1={L} x2={W - R} y1={Y(d0)} y2={Y(d0)} stroke="#ff6b1a" strokeDasharray="4 3" />
-      <text x={W - R - 4} y={Y(d0) - 5} fill="#ff6b1a" fontSize={9} textAnchor="end" fontFamily="IBM Plex Mono">d₀</text>
-      <text x={L + 4} y={T + 4} fill="#6f7b87" fontSize={9} fontFamily="IBM Plex Mono">|x_i − μ_i| / σ_i while gate active · bar = mean, halo = peak · {data.attrN.toLocaleString()} OOD steps</text>
+      <line x1={L} x2={W - R} y1={Y(d0)} y2={Y(d0)} stroke="var(--accent)" strokeDasharray="4 3" />
+      <text x={W - R - 4} y={Y(d0) - 5} fill="var(--accent)" fontSize={9} textAnchor="end">d₀</text>
+      <text x={L + 4} y={T + 4} fill="var(--text-3)" fontSize={9}>|x_i − μ_i| / σ_i while gate active · bar = mean, halo = peak · {data.attrN.toLocaleString()} gated steps</text>
     </svg>
   );
 }

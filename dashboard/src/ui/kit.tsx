@@ -28,9 +28,13 @@ export function Field(props: { label: ReactNode; value?: ReactNode; hint?: React
 
 export function Seg<T extends string | number>(props: {
   options: readonly { value: T; label: ReactNode }[]; value: T; onChange: (v: T) => void; label?: string;
+  className?: string; style?: CSSProperties;
 }) {
+  const n = props.options.length;
+  const idx = props.options.findIndex((o) => o.value === props.value);
   return (
-    <div className="seg" role="group" aria-label={props.label}>
+    <div className={`seg ${props.className ?? ''}`} role="group" aria-label={props.label} style={props.style}>
+      {idx >= 0 && <span className="seg-thumb" aria-hidden="true" style={{ width: `calc((100% - 4px) / ${n})`, transform: `translateX(${idx * 100}%)` }} />}
       {props.options.map((o) => (
         <button key={String(o.value)} type="button" aria-pressed={o.value === props.value} onClick={() => props.onChange(o.value)}>
           {o.label}

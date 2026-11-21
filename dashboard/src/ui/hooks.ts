@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useReducer, useRef } from 'react';
+import { onThemeChange } from './theme';
 
 /** Re-render at a fixed rate while `active`. */
 export function useTicker(hz: number, active = true): number {
@@ -46,11 +47,12 @@ export function useCanvas(draw: (c: CanvasCtx) => void) {
     ro.observe(cv.parentElement!);
     return () => ro.disconnect();
   }, [redraw]);
+  useEffect(() => onThemeChange(redraw), [redraw]);
   return { ref, redraw };
 }
 
 export const fmt = {
-  f: (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d) : '—'),
+  f: (v: number, d = 2) => (Number.isFinite(v) ? v.toFixed(d).replace('-', '−') : '—'),
   s: (v: number, d = 2) => (Number.isFinite(v) ? (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d) : '—'),
-  deg: (rad: number, d = 2) => (rad * 57.29578).toFixed(d),
+  deg: (rad: number, d = 2) => (rad * 57.29578).toFixed(d).replace('-', '−'),
 };

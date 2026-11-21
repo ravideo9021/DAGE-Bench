@@ -1,18 +1,19 @@
+import { CheckCircle2, XCircle, Circle } from 'lucide-react';
 import type { Trial } from '../../sim/trial';
 import { ENVELOPE, SIM } from '../../sim/physics';
 import { getNetwork } from '../../sim/network';
 import { featureLabel } from '../../engine/flight';
 
 const DEG = 57.29578;
-const AMP = 5; // visual amplification of roll on the ADI
+const RANGE = 15; // ± degrees shown on the roll dial
 
-export function Attitude({ tr }: { tr: Trial }) {
+/** Semicircular roll dial with the touchdown envelope marked on the track. */
+export function RollGauge({ tr }: { tr: Trial }) {
   const phi = tr.state[4] * DEG;
   const des = tr.phiDes * DEG;
   const lim = ENVELOPE.phi_max * DEG;
-  const R = 74;
-  const cx = 100, cy = 92;
-  const ang = (d: number) => Math.max(-80, Math.min(80, d * AMP));
+  const cx = 110, cy = 104, R = 84;
+  const ang = (d: number) => (Math.max(-RANGE, Math.min(RANGE, d)) / RANGE) * 90; // −90…90°
   const pt = (d: number, r: number) => {
     const a = ((ang(d) - 90) * Math.PI) / 180;
     return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
@@ -22,115 +23,107 @@ export function Attitude({ tr }: { tr: Trial }) {
     const [x1, y1] = pt(d1, r);
     return `M${x0},${y0} A${r},${r} 0 0 1 ${x1},${y1}`;
   };
-  const ticks = [-15, -10, -5, 0, 5, 10, 15];
-  const over = Math.abs(phi) > lim && tr.state[0] < ENVELOPE.final_approach_z;
+  const finalApp = tr.state[0] < ENVELOPE.final_approach_z;
+  const over = Math.abs(phi) > lim;
+  const [kx, ky] = pt(phi, R);
+  const [dx, dy] = pt(des, R - 16);
+  const valueColor = over && finalApp ? 'var(--crit)' : 'var(--text)';
   return (
-    <svg viewBox="0 0 200 150" width="100%" style={{ display: 'block' }} role="img" aria-label={`Roll ${phi.toFixed(2)} degrees`}>
-      <defs>
-        <clipPath id="adi-clip"><circle cx={cx} cy={cy} r={R - 12} /></clipPath>
-      </defs>
-      <g clipPath="url(#adi-clip)">
-        <g transform={`rotate(${-ang(phi)} ${cx} ${cy})`}>
-          <rect x={cx - 120} y={cy - 120} width={240} height={120} fill="#122233" />
-          <rect x={cx - 120} y={cy} width={240} height={120} fill="#1d1712" />
-          <line x1={cx - 120} y1={cy} x2={cx + 120} y2={cy} stroke="#e8ecef" strokeWidth={1.2} />
-          {[-20, -10, 10, 20].map((p) => (
-            <line key={p} x1={cx - (Math.abs(p) === 10 ? 16 : 26)} x2={cx + (Math.abs(p) === 10 ? 16 : 26)} y1={cy + p} y2={cy + p} stroke="rgba(232,236,239,0.35)" strokeWidth={1} />
-          ))}
-        </g>
-      </g>
-      <circle cx={cx} cy={cy} r={R - 12} fill="none" stroke="#242c35" />
-      {/* envelope zones */}
-      <path d={arc(-80 / AMP, -lim, R)} stroke="rgba(255,77,79,0.55)" strokeWidth={4} fill="none" />
-      <path d={arc(lim, 80 / AMP, R)} stroke="rgba(255,77,79,0.55)" strokeWidth={4} fill="none" />
-      <path d={arc(-lim, lim, R)} stroke="rgba(61,214,140,0.45)" strokeWidth={4} fill="none" />
-      {ticks.map((d) => {
-        const [x0, y0] = pt(d, R + 3);
-        const [x1, y1] = pt(d, R + (d % 10 === 0 ? 10 : 7));
-        const [tx, ty] = pt(d, R + 18);
-        return (
-          <g key={d}>
-            <line x1={x0} y1={y0} x2={x1} y2={y1} stroke="#6f7b87" strokeWidth={1} />
-            {d % 5 === 0 && <text x={tx} y={ty + 3} fill="#6f7b87" fontSize={8} textAnchor="middle" fontFamily="IBM Plex Mono">{Math.abs(d)}</text>}
-          </g>
-        );
+    <svg viewBox="0 0 220 128" width="100%" style={{ display: 'block' }} role="img" aria-label={`Roll ${phi.toFixed(2)} degrees`}>
+      <path d={arc(-RANGE, RANGE, R)} stroke="var(--fill)" strokeWidth={12} fill="none" strokeLinecap="round" />
+      <path d={arc(-lim, lim, R)} stroke="color-mix(in srgb, var(--ok) 55%, transparent)" strokeWidth={12} fill="none" />
+      {Math.abs(phi) > 0.05 && <path d={phi >= 0 ? arc(0, phi, R) : arc(phi, 0, R)} stroke={over ? 'var(--warn)' : 'var(--accent)'} strokeWidth={12} fill="none" strokeLinecap="round" />}
+      {[-15, -10, -5, 0, 5, 10, 15].map((d) => {
+        const [x0, y0] = pt(d, R - 11);
+        const [x1, y1] = pt(d, R - 15);
+        return <line key={d} x1={x0} y1={y0} x2={x1} y2={y1} stroke="var(--text-4)" strokeWidth={1.5} strokeLinecap="round" />;
       })}
-      {/* roll command bug */}
-      {(() => {
-        const [x, y] = pt(des, R - 5);
-        return <circle cx={x} cy={y} r={3} fill="none" stroke="#59a8ff" strokeWidth={1.5} />;
-      })()}
-      {/* pointer */}
-      <g transform={`rotate(${ang(phi)} ${cx} ${cy})`}>
-        <path d={`M${cx},${cy - R + 2} l-6,10 h12 z`} fill={over ? '#ff4d4f' : '#ff6b1a'} />
-      </g>
-      {/* aircraft symbol */}
-      <path d={`M${cx - 34},${cy} h22 l6,6 l6,-6 h22`} stroke="#ff6b1a" strokeWidth={2.4} fill="none" strokeLinejoin="round" />
-      <circle cx={cx} cy={cy} r={2} fill="#ff6b1a" />
-      <text x={6} y={146} fill="#4a545e" fontSize={8} fontFamily="IBM Plex Mono">ROLL ×{AMP} SCALE · °</text>
-      <text x={194} y={146} fill="#4a545e" fontSize={8} fontFamily="IBM Plex Mono" textAnchor="end">○ φ_des</text>
+      <circle cx={dx} cy={dy} r={3.2} fill="none" stroke="var(--info)" strokeWidth={1.6} />
+      <circle cx={kx} cy={ky} r={8.5} fill="#fff" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
+      <text x={cx} y={cy - 22} textAnchor="middle" fontSize={30} fontWeight={600} fill={valueColor} style={{ fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.02em' }}>
+        {Math.abs(phi) < 0.005 ? '0.00' : phi.toFixed(2).replace('-', '−')}°
+      </text>
+      <text x={cx} y={cy - 2} textAnchor="middle" fontSize={11.5} fill="var(--text-3)" fontWeight={500}>Roll · limit ±{lim.toFixed(1)}°</text>
+      <text x={cx - R} y={cy + 20} textAnchor="middle" fontSize={10.5} fill="var(--text-3)">−15°</text>
+      <text x={cx + R} y={cy + 20} textAnchor="middle" fontSize={10.5} fill="var(--text-3)">15°</text>
     </svg>
   );
 }
 
-export function AltTape({ tr }: { tr: Trial }) {
+export function AltitudeBar({ tr }: { tr: Trial }) {
   const z = Math.max(0, tr.state[0]);
   const zRef = Math.max(0, SIM.z0 - SIM.v_des * tr.t);
-  const H = 150, top = 8, bot = 142;
-  const Y = (v: number) => bot - (v / 4.2) * (bot - top);
+  const H = 104, W = 22, top = 6;
+  const Y = (v: number) => top + H - (Math.min(v, 4.2) / 4.2) * H;
   return (
-    <svg viewBox="0 0 64 150" width="64" height="150" style={{ display: 'block', flex: 'none' }} role="img" aria-label={`Altitude ${z.toFixed(2)} metres`}>
-      <rect x={20} y={top} width={14} height={bot - top} fill="#0e1216" stroke="#242c35" />
-      <rect x={20} y={Y(tr.plant.R_z)} width={14} height={bot - Y(tr.plant.R_z)} fill="rgba(245,184,61,0.18)" />
-      <line x1={18} x2={36} y1={Y(1)} y2={Y(1)} stroke="#59a8ff" strokeDasharray="2 2" />
-      {[0, 1, 2, 3, 4].map((m) => (
-        <g key={m}>
-          <line x1={34} x2={40} y1={Y(m)} y2={Y(m)} stroke="#4a545e" />
-          <text x={44} y={Y(m) + 3} fill="#6f7b87" fontSize={8} fontFamily="IBM Plex Mono">{m}</text>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+      <svg width={W + 26} height={H + 12} viewBox={`0 0 ${W + 26} ${H + 12}`} role="img" aria-label={`Altitude ${z.toFixed(2)} metres`}>
+        <rect x={0} y={top} width={W} height={H} rx={W / 2} fill="var(--fill)" />
+        <clipPath id="alt-clip"><rect x={0} y={top} width={W} height={H} rx={W / 2} /></clipPath>
+        <g clipPath="url(#alt-clip)">
+          <rect x={0} y={Y(tr.plant.R_z)} width={W} height={top + H - Y(tr.plant.R_z)} fill="color-mix(in srgb, var(--warn) 22%, transparent)" />
+          <rect x={0} y={Y(z)} width={W} height={top + H - Y(z)} fill="color-mix(in srgb, var(--accent) 85%, transparent)" />
         </g>
-      ))}
-      <rect x={21} y={Y(z)} width={12} height={bot - Y(z)} fill="rgba(232,236,239,0.12)" />
-      <path d={`M14,${Y(zRef) - 4} l6,4 l-6,4 z`} fill="#59a8ff" />
-      <path d={`M20,${Y(z)} h14`} stroke="#ff6b1a" strokeWidth={2} />
-      <text x={2} y={H - 1} fill="#4a545e" fontSize={7.5} fontFamily="IBM Plex Mono">m</text>
-    </svg>
+        <path d={`M${W + 3},${Y(zRef)} l6,-4 v8 z`} fill="var(--info)" />
+        {[0, 2, 4].map((m) => <text key={m} x={W + 12} y={Y(m) + 4} fontSize={10} fill="var(--text-3)">{m}</text>)}
+      </svg>
+      <span style={{ fontSize: 12, color: 'var(--text-3)', fontWeight: 500 }}>Altitude</span>
+    </div>
   );
 }
 
-export function GateMonitor({ tr }: { tr: Trial }) {
+/** Two concentric rings: outer = gate weight σ, inner = distance d relative to 2·d₀. */
+export function GateRings({ tr }: { tr: Trial }) {
   const net = getNetwork();
   const isRes = tr.cfg.controller === 'Res-G' || tr.cfg.controller === 'Res-NG';
   const gated = tr.cfg.controller === 'Res-G';
   const d0 = net.d0 * tr.cfg.d0Scale;
-  const dMax = Math.max(d0 * 2, 10);
-  const sigma = tr.sigma;
-  const col = !isRes ? '#4a545e' : sigma > 0.98 ? '#3dd68c' : sigma > 0.8 ? '#f5b83d' : '#ff4d4f';
+  const sigma = isRes ? (gated ? tr.sigma : 1) : 0;
+  const dFrac = isRes ? Math.min(1, tr.d / (2 * d0)) : 0;
+  const sCol = !isRes ? 'var(--fill-strong)' : sigma > 0.98 ? 'var(--ok)' : sigma > 0.8 ? 'var(--warn)' : 'var(--crit)';
+  const dCol = tr.d > d0 ? 'var(--warn)' : 'var(--info)';
+  const ring = (r: number, frac: number, color: string, w: number) => {
+    const c = 2 * Math.PI * r;
+    return (
+      <>
+        <circle cx={60} cy={60} r={r} fill="none" stroke={color} strokeOpacity={0.18} strokeWidth={w} />
+        <circle cx={60} cy={60} r={r} fill="none" stroke={color} strokeWidth={w} strokeLinecap="round"
+          strokeDasharray={`${Math.max(0.001, frac) * c} ${c}`} transform="rotate(-90 60 60)" style={{ transition: 'stroke-dasharray 0.12s linear' }} />
+      </>
+    );
+  };
   return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 8 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+      <svg width={112} height={112} viewBox="0 0 120 120" role="img" aria-label={`Gate weight ${sigma.toFixed(3)}`} style={{ flex: 'none' }}>
+        {ring(50, sigma, sCol, 13)}
+        {ring(33, dFrac, dCol, 13)}
+        <line x1={60} y1={60 - 33 - 8} x2={60} y2={60 - 33 + 8} stroke="var(--text-3)" strokeWidth={2} transform="rotate(180 60 60)" strokeLinecap="round" />
+      </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
         <div className="readout">
-          <span className="rl">σ gate weight</span>
-          <span className="rv" style={{ color: col, fontSize: 26 }}>{isRes ? (gated ? sigma.toFixed(3) : '1.000') : '—'}</span>
+          <span className="rl" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><i style={{ width: 8, height: 8, borderRadius: 4, background: sCol }} />Gate weight σ</span>
+          <span className="rv" style={{ fontSize: 20 }}>{isRes ? sigma.toFixed(3) : '—'}</span>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <span className={`badge ${!isRes ? '' : !gated ? 'warn' : sigma > 0.98 ? 'ok' : 'warn'}`}>
-            {!isRes ? 'Not fitted' : !gated ? 'Ungated' : sigma > 0.98 ? 'In distribution' : 'Attenuating'}
-          </span>
+        <div className="readout">
+          <span className="rl" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><i style={{ width: 8, height: 8, borderRadius: 4, background: dCol }} />Distance from training</span>
+          <span className="rv" style={{ fontSize: 20 }}>{isRes ? tr.d.toFixed(2) : '—'}<small>of {d0.toFixed(2)}</small></span>
         </div>
       </div>
-      <div className="meter" style={{ marginBottom: 12 }}><i style={{ width: `${(isRes ? (gated ? sigma : 1) : 0) * 100}%`, background: col }} /></div>
-      <div className="field-l" style={{ marginBottom: 5 }}><span>d(x) Chebyshev dist.</span><b>{isRes ? tr.d.toFixed(2) : '—'} <span style={{ color: 'var(--text-3)', fontSize: 10 }}>/ d₀ {d0.toFixed(2)}</span></b></div>
-      <div className="meter">
-        <i style={{ width: `${Math.min(1, (isRes ? tr.d : 0) / dMax) * 100}%`, background: tr.d > d0 ? '#f5b83d' : '#a3adb7' }} />
-        <em style={{ left: `${(d0 / dMax) * 100}%`, background: '#ff6b1a' }} />
-      </div>
-      <dl className="kv" style={{ marginTop: 12 }}>
-        <dt>OOD driver</dt><dd>{isRes && tr.d > d0 * 0.7 ? featureLabel(tr.dIdx) : '—'}</dd>
-        <dt>τ̂ predicted</dt><dd>{isRes ? tr.tauHat.toFixed(4) : '—'}<small>N·m</small></dd>
-        <dt>τ true (DAGE)</dt><dd>{tr.trueTau().toFixed(4)}<small>N·m</small></dd>
-        <dt>applied −σ·τ̂</dt><dd>{isRes ? (-(gated ? sigma : 1) * tr.tauHat).toFixed(4) : '—'}<small>N·m</small></dd>
-      </dl>
     </div>
+  );
+}
+
+export function GateDetails({ tr }: { tr: Trial }) {
+  const isRes = tr.cfg.controller === 'Res-G' || tr.cfg.controller === 'Res-NG';
+  const gated = tr.cfg.controller === 'Res-G';
+  const d0 = getNetwork().d0 * tr.cfg.d0Scale;
+  return (
+    <dl className="kv">
+      <dt>Predicted torque τ̂</dt><dd>{isRes ? tr.tauHat.toFixed(4) : '—'}<small>N·m</small></dd>
+      <dt>Actual DAGE torque</dt><dd>{tr.trueTau().toFixed(4)}<small>N·m</small></dd>
+      <dt>Correction applied</dt><dd>{isRes ? (-(gated ? tr.sigma : 1) * tr.tauHat).toFixed(4) : '—'}<small>N·m</small></dd>
+      <dt>Furthest input</dt><dd>{isRes && tr.d > d0 * 0.7 ? featureLabel(tr.dIdx) : '—'}</dd>
+    </dl>
   );
 }
 
@@ -139,21 +132,23 @@ export function EnvelopeCheck({ tr }: { tr: Trial }) {
   const s = tr.state;
   const peak = done ? tr.result!.peakPhi : peakSoFar(tr);
   const rows = [
-    { l: 'peak |φ| final appr.', v: peak, max: ENVELOPE.phi_max, unit: 'rad', d: 4 },
-    { l: '|v_z| impact', v: done ? tr.result!.vz : Math.abs(s[1]), max: ENVELOPE.vz_max, unit: 'm/s', d: 3 },
-    { l: '|Δv_y| slip', v: done ? tr.result!.dvy : Math.abs(s[3]), max: ENVELOPE.dvy_max, unit: 'm/s', d: 3 },
+    { l: 'Peak roll on final approach', v: peak, max: ENVELOPE.phi_max, unit: 'rad', d: 3 },
+    { l: 'Sink rate', v: done ? tr.result!.vz : Math.abs(s[1]), max: ENVELOPE.vz_max, unit: 'm/s', d: 2 },
+    { l: 'Sideways slip', v: done ? tr.result!.dvy : Math.abs(s[3]), max: ENVELOPE.dvy_max, unit: 'm/s', d: 2 },
   ];
   return (
     <div>
       {rows.map((r) => {
-        const frac = Math.min(1, r.v / (r.max * 2));
+        const frac = Math.min(1, r.v / (r.max * 1.6));
         const bad = r.v > r.max;
-        const col = bad ? '#ff4d4f' : done ? '#3dd68c' : '#a3adb7';
+        const col = bad ? 'var(--crit)' : done ? 'var(--ok)' : 'var(--accent)';
+        const Icon = done ? (bad ? XCircle : CheckCircle2) : Circle;
         return (
           <div className="env-row" key={r.l}>
+            <Icon size={18} strokeWidth={2} style={{ color: done ? (bad ? 'var(--crit)' : 'var(--ok)') : bad ? 'var(--crit)' : 'var(--text-4)' }} />
             <span className="el">{r.l}</span>
-            <span className="ev" style={{ color: bad ? '#ff4d4f' : undefined }}>{r.v.toFixed(r.d)} <span style={{ color: 'var(--text-4)' }}>≤ {r.max}</span></span>
-            <div className="meter"><i style={{ width: `${frac * 100}%`, background: col }} /><em style={{ left: '50%', background: '#4a545e' }} /></div>
+            <span className="ev" style={{ color: bad ? 'var(--crit)' : undefined }}>{r.v.toFixed(r.d)} <small>/ {r.max} {r.unit}</small></span>
+            <div className="meter"><i style={{ width: `${frac * 100}%`, background: col }} /><em style={{ left: `${(1 / 1.6) * 100}%` }} /></div>
           </div>
         );
       })}

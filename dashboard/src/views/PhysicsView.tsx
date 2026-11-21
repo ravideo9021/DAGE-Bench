@@ -1,3 +1,4 @@
+import { theme as TH, alpha, FONT, rgbOf } from '../ui/theme';
 import { useEffect, useState } from 'react';
 import { dageTorque, geAccel, SIM, MISMATCH, MAX_TRAIN_SPEED } from '../sim/physics';
 import { Panel, Field, Slider, Seg, Readout } from '../ui/kit';
@@ -7,7 +8,7 @@ interface P { K: number; L: number; lam: number; n: number; A: number; Rz: numbe
 const NOMINAL: P = { K: SIM.K_phi, L: SIM.L, lam: SIM.lam, n: SIM.decay_exp, A: SIM.A_GE, Rz: SIM.R_z };
 const MISM: P = { K: SIM.K_phi * MISMATCH.K_phi_scale, L: SIM.L * MISMATCH.L_scale, lam: MISMATCH.lam, n: MISMATCH.decay_exp, A: SIM.A_GE * MISMATCH.A_GE_scale, Rz: SIM.R_z * MISMATCH.R_z_scale };
 const PROFILE_SPEEDS = [1.5, 3, 5, 6];
-const PCOL = ['#59a8ff', '#a3adb7', '#f5b83d', '#ff6b1a'];
+const PCOL = [TH().info, TH().text2, TH().warn, TH().accent];
 
 /** τ for a vehicle whose inertial lateral speed is `slip`·v_p (slip=1: matched). */
 function tau(p: P, z: number, vp: number, slip: number) {
@@ -39,7 +40,7 @@ export default function PhysicsView() {
       }
     }
     // contours of |τ|
-    ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+    ctx.strokeStyle = alpha(TH().text, 0.22);
     ctx.lineWidth = 1;
     for (const lvl of [0.1, 0.25, 0.5, 0.75]) {
       ctx.beginPath();
@@ -58,24 +59,26 @@ export default function PhysicsView() {
     }
     // training boundary
     const xb = L + (MAX_TRAIN_SPEED / 7) * pw;
-    ctx.strokeStyle = '#e8ecef';
+    ctx.strokeStyle = TH().text;
     ctx.setLineDash([5, 4]);
     ctx.beginPath(); ctx.moveTo(xb, T); ctx.lineTo(xb, T + ph); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.font = '9.5px "IBM Plex Mono", monospace';
-    ctx.fillStyle = '#e8ecef';
-    ctx.fillText('TRAINING ◂', xb - 66, T + 14);
-    ctx.fillText('▸ OOD', xb + 6, T + 14);
+    ctx.font = `500 11.0px ${FONT}`;
+    ctx.fillStyle = TH().text;
+    ctx.textAlign = 'right';
+    ctx.fillText('Trained', xb - 8, T + 14);
+    ctx.textAlign = 'left';
+    ctx.fillText('Extrapolated', xb + 8, T + 14);
     // final approach & GE lines
     const yFa = T + (1 - 1 / 4) * ph;
-    ctx.strokeStyle = 'rgba(89,168,255,0.6)';
+    ctx.strokeStyle = alpha(TH().info, 0.6);
     ctx.setLineDash([2, 3]);
     ctx.beginPath(); ctx.moveTo(L, yFa); ctx.lineTo(L + pw, yFa); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.fillStyle = 'rgba(89,168,255,0.9)';
+    ctx.fillStyle = alpha(TH().info, 0.9);
     ctx.fillText('final approach z = 1 m', L + 6, yFa - 5);
     // axes
-    ctx.fillStyle = '#5a6570';
+    ctx.fillStyle = TH().text3;
     ctx.textAlign = 'center';
     for (let v = 0; v <= 7; v++) ctx.fillText(String(v), L + (v / 7) * pw, T + ph + 13);
     ctx.fillText('platform speed v_p (m/s)', L + pw / 2, h - 4);
@@ -86,7 +89,7 @@ export default function PhysicsView() {
     const bx = L + pw + 22;
     for (let i = 0; i < ph; i++) { ctx.fillStyle = cmap(1 - (2 * i) / ph); ctx.fillRect(bx, T + i, 10, 1.5); }
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#5a6570';
+    ctx.fillStyle = TH().text3;
     ctx.fillText(`+${tauMax.toFixed(2)}`, bx + 14, T + 6);
     ctx.fillText('0', bx + 14, T + ph / 2 + 3);
     ctx.fillText(`−${tauMax.toFixed(2)}`, bx + 14, T + ph);
@@ -152,8 +155,8 @@ export default function PhysicsView() {
               <Profile f={(z, i) => tau(p, z, PROFILE_SPEEDS[i], slip)} n={4} colors={PCOL} unit="N·m" mark={p.L} markLabel="L" />
             </Panel>
             <Panel tag="PHY-GE" title="Ground-effect acceleration" className="chart-panel" style={{ height: 270 }}
-              right={<div className="legend"><span><i style={{ background: '#ff6b1a' }} />current</span><span><i className="dash" style={{ color: '#6f7b87' }} />nominal</span></div>}>
-              <Profile f={(z, i) => (i === 0 ? geAccel(Math.max(z, 0.01), p.A, p.Rz, p.n) : geAccel(Math.max(z, 0.01), NOMINAL.A, NOMINAL.Rz, NOMINAL.n))} n={2} colors={['#ff6b1a', '#6f7b87']} dashed={[false, true]} unit="m/s²" mark={p.Rz} markLabel="R_z" />
+              right={<div className="legend"><span><i style={{ background: TH().accent }} />current</span><span><i className="dash" style={{ color: TH().text3 }} />nominal</span></div>}>
+              <Profile f={(z, i) => (i === 0 ? geAccel(Math.max(z, 0.01), p.A, p.Rz, p.n) : geAccel(Math.max(z, 0.01), NOMINAL.A, NOMINAL.Rz, NOMINAL.n))} n={2} colors={[TH().accent, TH().text3]} dashed={[false, true]} unit="m/s²" mark={p.Rz} markLabel="R_z" />
             </Panel>
           </div>
         </div>
@@ -177,15 +180,15 @@ function Profile({ f, n, colors, dashed, unit, mark, markLabel }: { f: (z: numbe
         const v = lo + q * (hi - lo);
         return (
           <g key={q}>
-            <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="#151b21" />
-            <text x={L - 6} y={Y(v) + 3} fill="#5a6570" fontSize={9} textAnchor="end" fontFamily="IBM Plex Mono">{v.toFixed(Math.abs(hi) < 1 ? 2 : 1)}</text>
+            <line x1={L} x2={W - R} y1={Y(v)} y2={Y(v)} stroke="var(--grid)" />
+            <text x={L - 6} y={Y(v) + 3} fill="var(--text-3)" fontSize={9} textAnchor="end">{v.toFixed(Math.abs(hi) < 1 ? 2 : 1)}</text>
           </g>
         );
       })}
-      {[0, 0.5, 1, 1.5, 2, 2.5, 3].map((z) => <text key={z} x={X(z)} y={H - 16} fill="#5a6570" fontSize={9} textAnchor="middle" fontFamily="IBM Plex Mono">{z}</text>)}
-      <text x={(L + W - R) / 2} y={H - 3} fill="#5a6570" fontSize={9} textAnchor="middle" fontFamily="IBM Plex Mono">altitude z (m) · {unit}</text>
-      <line x1={X(mark)} x2={X(mark)} y1={T} y2={H - B} stroke="#f5b83d" strokeDasharray="3 3" opacity={0.7} />
-      <text x={X(mark) + 4} y={T + 10} fill="#f5b83d" fontSize={9} fontFamily="IBM Plex Mono">{markLabel}</text>
+      {[0, 0.5, 1, 1.5, 2, 2.5, 3].map((z) => <text key={z} x={X(z)} y={H - 16} fill="var(--text-3)" fontSize={9} textAnchor="middle">{z}</text>)}
+      <text x={(L + W - R) / 2} y={H - 3} fill="var(--text-3)" fontSize={9} textAnchor="middle">altitude z (m) · {unit}</text>
+      <line x1={X(mark)} x2={X(mark)} y1={T} y2={H - B} stroke="var(--warn)" strokeDasharray="3 3" opacity={0.7} />
+      <text x={X(mark) + 4} y={T + 10} fill="var(--warn)" fontSize={9}>{markLabel}</text>
       {series.map((s, i) => (
         <polyline key={i} points={s.map((v, k) => `${X((k / N) * 3)},${Y(v)}`).join(' ')} fill="none" stroke={colors[i]} strokeWidth={1.8} strokeDasharray={dashed?.[i] ? '4 3' : undefined} />
       ))}
@@ -193,14 +196,13 @@ function Profile({ f, n, colors, dashed, unit, mark, markLabel }: { f: (z: numbe
   );
 }
 
-/** Diverging map: blue (−) → graphite (0) → orange (+). */
+/** Diverging map: accent blue (−) → card surface (0) → orange (+), following the appearance. */
 function cmap(v: number): string {
+  const th = TH();
   const t = Math.max(-1, Math.min(1, v));
-  const a = Math.pow(Math.abs(t), 0.42);
-  const base = [14, 18, 22];
-  const pos = [255, 107, 26];
-  const neg = [89, 168, 255];
-  const c = t >= 0 ? pos : neg;
+  const a = Math.pow(Math.abs(t), 0.5);
+  const base = rgbOf(th.card);
+  const c = rgbOf(t >= 0 ? th.disturb : th.accent);
   const r = Math.round(base[0] + (c[0] - base[0]) * a);
   const g = Math.round(base[1] + (c[1] - base[1]) * a);
   const b = Math.round(base[2] + (c[2] - base[2]) * a);

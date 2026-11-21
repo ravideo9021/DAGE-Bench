@@ -1,4 +1,4 @@
-# DAGE Flight Console
+# DAGE-Bench Lab
 
 An interactive web console for DAGE-Bench. It runs the actual research system in the browser: a TypeScript port of the reduced-order DAGE plant, the PD / PID / PID+DOB / residual controllers, and the trained 7,906-parameter residual MLP (weights exported from `results/residual_model.npz`). Nothing in the simulation is mocked. Every trajectory, inference, gate decision and Monte Carlo statistic is computed live.
 
@@ -19,11 +19,15 @@ npm run dev          # http://localhost:5173
 | **Physics** | Interactive DAGE torque field τ(z, v_p) and ground-effect profiles, with nominal and mismatch presets and a training-envelope overlay. |
 | **Results** | Published Tables III and IV as metric-switchable heatmaps, the full Table III listing, key findings and the publication figures. |
 
-Keyboard (Flight): `Space` play/pause · `R` reset · `N` next seed · `1–5` controller · `C` compare · `M` mismatch · `V` camera · `?` help.
+Keyboard (Flight): `Space` play/pause · `R` restart · `N` next seed · `1–5` controller · `C` compare · `M` mismatch · `V` camera · `?` shortcuts.
+
+## Design
+
+A macOS-style window: a source-list sidebar, large-title pages, elevated cards, and a grouped inspector beside the 3D viewport. The type is San Francisco on Apple devices and Inter elsewhere. Overlays on the viewport use frosted glass. The 3D scene is lit with a studio environment map, so the hull and the quadrotor carry real reflections. Light and dark appearances follow the system setting, and the switch at the bottom of the sidebar overrides it. Every colour, including the canvas charts and the WebGL scene, comes from the CSS tokens in `src/styles.css`, read through `src/ui/theme.ts`.
 
 ## Fidelity
 
-At boot the console checks itself against NumPy reference vectors embedded in `src/sim/model.json`:
+Every time it loads, the app checks itself against NumPy reference vectors embedded in `src/sim/model.json` (`src/sim/checks.ts`). The results appear behind the **Verified** badge in the sidebar:
 
 - MLP forward pass: max |Δ| ≈ 4e-16 (float64 round-off)
 - RK4 integration step: exact
@@ -43,10 +47,10 @@ The TypeScript PRNG differs from NumPy's, so individual trials differ, but the s
 
 ```
 src/
-  sim/            # physics.ts, network.ts, trial.ts, rng.ts, selftest.ts, model.json
+  sim/            # physics.ts, network.ts, trial.ts, rng.ts, selftest.ts, checks.ts, model.json
   engine/         # flight.ts (live engine + event log), scene.ts (three.js), montecarlo.ts + mc.worker.ts
-  views/          # one file per view, plus flight/Instruments.tsx and Boot.tsx
-  ui/             # kit.tsx (panels, controls), hooks.ts, StripChart.tsx
+  views/          # one file per view, plus flight/Instruments.tsx and Verify.tsx
+  ui/             # kit.tsx (cards, controls), hooks.ts, theme.ts, StripChart.tsx
 scripts/
   export_model.py # re-export weights + reference vectors after retraining
   validate.ts     # TS-vs-Python parity and Monte Carlo reproduction check

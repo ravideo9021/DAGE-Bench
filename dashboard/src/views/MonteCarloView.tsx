@@ -1,9 +1,9 @@
+import { theme as TH, alpha, FONT, CTRL_VAR } from '../ui/theme';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { Play, Square } from 'lucide-react';
 import { campaign, cellStats, workerCount, FIELDS, type McCell } from '../engine/montecarlo';
 import { CONTROLLERS, CONTROLLER_INFO, type ControllerId } from '../sim/trial';
 import { ENVELOPE, MAX_TRAIN_SPEED } from '../sim/physics';
-import { COLORS } from '../engine/flight';
 import { evaluationResults, mismatchResults } from '../data/results';
 import { Panel, Field, Seg, Slider, Toggle, Readout } from '../ui/kit';
 import { useCanvas, useTicker } from '../ui/hooks';
@@ -57,16 +57,16 @@ export default function MonteCarloView() {
         <div><Readout label="Simulated flight" value={(campaign.simSeconds / 60).toFixed(1)} unit="min" /></div>
         <div><Readout label="NN inferences" value={campaign.inferences > 1e6 ? (campaign.inferences / 1e6).toFixed(2) + 'M' : campaign.inferences.toLocaleString()} /></div>
         <div><Readout label="Wall clock" value={el.toFixed(1)} unit="s" /></div>
-        <div><Readout label="Execution" value={campaign.mode === 'workers' ? `${workerCount()}× worker` : 'main thread'} color={campaign.running ? 'var(--signal)' : undefined} /></div>
+        <div><Readout label="Execution" value={campaign.mode === 'workers' ? `${workerCount()} threads` : 'Main thread'} color={campaign.running ? 'var(--signal)' : undefined} /></div>
       </div>
 
       <div className="grid g-side">
         <Panel tag="MC-CFG" title="Campaign setup">
           <Field label="Platform speeds (m/s)">
-            <div className="seg" style={{ gridAutoColumns: '1fr' }}>
+            <div className="seg multi">
               {SPEED_OPTS.map((v) => (
                 <button key={v} type="button" aria-pressed={speeds.includes(v)} onClick={() => setSpeeds((x) => (x.includes(v) ? x.filter((y) => y !== v) : [...x, v]))}>
-                  {v}{v > MAX_TRAIN_SPEED ? '*' : ''}
+                  {v}
                 </button>
               ))}
             </div>
@@ -75,7 +75,7 @@ export default function MonteCarloView() {
             <div className="ctl-list">
               {CONTROLLERS.map((c) => (
                 <button key={c} type="button" className="ctl-opt" style={{ padding: '6px 10px' }} aria-pressed={ctrls.includes(c)} onClick={() => setCtrls((x) => (x.includes(c) ? x.filter((y) => y !== c) : [...x, c]))}>
-                  <span className="sw" style={{ background: ctrls.includes(c) ? COLORS[c] : 'transparent', border: `1px solid ${COLORS[c]}` }} />
+                  <span className="sw" style={{ background: ctrls.includes(c) ? CTRL_VAR[c] : 'transparent', border: `1px solid ${CTRL_VAR[c]}` }} />
                   <span className="nm">{CONTROLLER_INFO[c].name}</span>
                   <span className="id">{c}</span>
                 </button>
@@ -100,7 +100,7 @@ export default function MonteCarloView() {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
           <Panel tag="MC-MTX" title={`Envelope success rate · Wilson 95% CI${s?.mismatch ? ' · mismatch' : ''}`}
-            right={<span className="mono" style={{ fontSize: 10, color: 'var(--text-3)' }}>Grey figure = paper</span>}>
+            right={<span style={{ fontSize: 12, color: 'var(--text-3)' }}>Published value in grey</span>}>
             {s && <Matrix cells={cells} speeds={s.speeds} controllers={s.controllers} mismatch={s.mismatch} sel={sel} setSel={setSel} />}
           </Panel>
           <div className="grid g-2">
@@ -123,7 +123,7 @@ function Matrix({ cells, speeds, controllers, mismatch, sel, setSel }: { cells: 
     <div className="matrix" style={{ gridTemplateColumns: `130px repeat(${speeds.length}, minmax(0, 1fr))` }}>
       <div />
       {speeds.map((v) => (
-        <div key={v} className="mx-h">v_p {v.toFixed(1)} {v > MAX_TRAIN_SPEED && <span className="badge warn" style={{ marginLeft: 6, height: 15 }}>OOD</span>}</div>
+        <div key={v} className="mx-h">{v} m/s {v > MAX_TRAIN_SPEED && <span className="badge warn" style={{ height: 18, fontSize: 10.5 }}>Beyond training</span>}</div>
       ))}
       {controllers.map((c) => (
         <Row key={c} c={c} speeds={speeds} cells={cells} mismatch={mismatch} sel={sel} setSel={setSel} />
@@ -135,22 +135,22 @@ function Matrix({ cells, speeds, controllers, mismatch, sel, setSel }: { cells: 
 function Row({ c, speeds, cells, mismatch, sel, setSel }: { c: ControllerId; speeds: number[]; cells: McCell[]; mismatch: boolean; sel: number | null; setSel: (n: number | null) => void }) {
   return (
     <>
-      <div className="mx-rh"><span style={{ width: 8, height: 8, background: COLORS[c], borderRadius: 2 }} />{c}</div>
+      <div className="mx-rh"><span style={{ width: 8, height: 8, background: CTRL_VAR[c], borderRadius: 2 }} />{c}</div>
       {speeds.map((vp) => {
         const idx = cells.findIndex((x) => x.controller === c && x.vp === vp);
         const cell = cells[idx];
         if (!cell) return <div key={vp} />;
         const st = cellStats(cell);
         const ref = paperRef(vp, c, mismatch);
-        const col = st.rate >= 0.99 ? 'var(--ok)' : st.rate >= 0.8 ? 'var(--warn)' : 'var(--crit)';
-        const tint = st.rate >= 0.99 ? 'rgba(61,214,140,0.05)' : st.rate >= 0.8 ? 'rgba(245,184,61,0.07)' : 'rgba(255,77,79,0.08)';
+        const col = st.rate >= 0.99 ? 'var(--text)' : st.rate >= 0.8 ? 'var(--warn)' : 'var(--crit)';
+        const tint = st.rate >= 0.99 ? undefined : st.rate >= 0.8 ? alpha(TH().warn, 0.09) : alpha(TH().crit, 0.09);
         const agrees = ref !== undefined && cell.done === cell.n ? ref / 100 >= st.lo - 0.005 && ref / 100 <= st.hi + 0.005 : null;
         return (
           <button key={vp} type="button" className="mx-cell" aria-pressed={sel === idx} onClick={() => setSel(sel === idx ? null : idx)} style={{ background: cell.done ? tint : undefined }}>
             <div className="pv" style={{ color: cell.done ? col : 'var(--text-4)' }}>{cell.done ? (st.rate * 100).toFixed(1) : '—'}<small>%</small></div>
             <div className="ci">{cell.done ? `[${(st.lo * 100).toFixed(1)}, ${(st.hi * 100).toFixed(1)}]` : 'queued'}</div>
             <div className="cibar">
-              <i style={{ left: `${st.lo * 100}%`, width: `${(st.hi - st.lo) * 100}%`, background: col, opacity: 0.5 }} />
+              <i style={{ left: `${st.lo * 100}%`, width: `${(st.hi - st.lo) * 100}%`, background: st.rate >= 0.99 ? 'var(--ok)' : col, opacity: 0.6 }} />
               {ref !== undefined && <em style={{ left: `calc(${ref}% - 1px)` }} />}
             </div>
             <div className="ref">
@@ -172,26 +172,26 @@ function Scatter({ cells, sel }: { cells: McCell[]; sel: number | null }) {
     const xMax = 0.3, yMax = 2.0;
     const X = (v: number) => L + Math.min(1, v / xMax) * pw;
     const Y = (v: number) => T + (1 - Math.min(1, v / yMax)) * ph;
-    ctx.fillStyle = 'rgba(61,214,140,0.06)';
+    ctx.fillStyle = alpha(TH().ok, 0.06);
     ctx.fillRect(X(0), Y(ENVELOPE.dvy_max), X(ENVELOPE.phi_max) - X(0), Y(0) - Y(ENVELOPE.dvy_max));
-    ctx.strokeStyle = 'rgba(61,214,140,0.55)';
+    ctx.strokeStyle = alpha(TH().ok, 0.55);
     ctx.setLineDash([4, 3]);
     ctx.strokeRect(X(0) + 0.5, Y(ENVELOPE.dvy_max) + 0.5, X(ENVELOPE.phi_max) - X(0), Y(0) - Y(ENVELOPE.dvy_max));
     ctx.setLineDash([]);
-    ctx.font = '9px "IBM Plex Mono", monospace';
-    ctx.fillStyle = 'rgba(61,214,140,0.8)';
+    ctx.font = `500 10.5px ${FONT}`;
+    ctx.fillStyle = alpha(TH().ok, 0.8);
     ctx.fillText('SAFE ENVELOPE', X(0) + 6, Y(ENVELOPE.dvy_max) + 13);
-    ctx.fillStyle = '#5a6570';
+    ctx.fillStyle = TH().text3;
     ctx.textAlign = 'center';
     for (let v = 0; v <= xMax + 1e-9; v += 0.05) {
-      ctx.strokeStyle = '#151b21';
+      ctx.strokeStyle = TH().grid;
       ctx.beginPath(); ctx.moveTo(X(v) + 0.5, T); ctx.lineTo(X(v) + 0.5, T + ph); ctx.stroke();
       ctx.fillText(v.toFixed(2), X(v), T + ph + 13);
     }
     ctx.fillText('peak |φ| on final approach (rad)', L + pw / 2, h - 4);
     ctx.textAlign = 'right';
     for (let v = 0; v <= yMax + 1e-9; v += 0.5) {
-      ctx.strokeStyle = '#151b21';
+      ctx.strokeStyle = TH().grid;
       ctx.beginPath(); ctx.moveTo(L, Y(v) + 0.5); ctx.lineTo(L + pw, Y(v) + 0.5); ctx.stroke();
       ctx.fillText(v.toFixed(1), L - 6, Y(v) + 3);
     }
@@ -206,7 +206,7 @@ function Scatter({ cells, sel }: { cells: McCell[]; sel: number | null }) {
     for (const ci of order) {
       const c = cells[ci];
       const dim = sel !== null && ci !== sel;
-      ctx.fillStyle = COLORS[c.controller];
+      ctx.fillStyle = TH().ctrl[c.controller];
       ctx.globalAlpha = dim ? 0.06 : sel !== null ? 0.85 : 0.45;
       for (let i = 0; i < c.n; i++) {
         const o = i * FIELDS;
@@ -231,19 +231,19 @@ function SpeedCurve({ cells, speeds, controllers }: { cells: McCell[]; speeds: n
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width="100%" height="100%" style={{ display: "block" }}>
       {xs[1] > MAX_TRAIN_SPEED && (
-        <rect x={X(Math.max(MAX_TRAIN_SPEED, xs[0]))} y={T} width={X(xs[1]) - X(Math.max(MAX_TRAIN_SPEED, xs[0]))} height={H - T - B} fill="rgba(245,184,61,0.05)" />
+        <rect x={X(Math.max(MAX_TRAIN_SPEED, xs[0]))} y={T} width={X(xs[1]) - X(Math.max(MAX_TRAIN_SPEED, xs[0]))} height={H - T - B} fill={alpha(TH().warn, 0.05)} />
       )}
       {[0, 0.25, 0.5, 0.75, 1].map((p) => (
         <g key={p}>
-          <line x1={L} x2={W - R} y1={Y(p)} y2={Y(p)} stroke="#151b21" />
-          <text x={L - 6} y={Y(p) + 3} fill="#5a6570" fontSize={9} textAnchor="end" fontFamily="IBM Plex Mono">{p * 100}%</text>
+          <line x1={L} x2={W - R} y1={Y(p)} y2={Y(p)} stroke="var(--grid)" />
+          <text x={L - 6} y={Y(p) + 3} fill="var(--text-3)" fontSize={9} textAnchor="end">{p * 100}%</text>
         </g>
       ))}
       {speeds.map((v) => (
-        <text key={v} x={X(v)} y={H - 12} fill="#5a6570" fontSize={9} textAnchor="middle" fontFamily="IBM Plex Mono">{v}</text>
+        <text key={v} x={X(v)} y={H - 12} fill="var(--text-3)" fontSize={9} textAnchor="middle">{v}</text>
       ))}
-      <text x={(L + W - R) / 2} y={H - 1} fill="#5a6570" fontSize={9} textAnchor="middle" fontFamily="IBM Plex Mono">platform speed v_p (m/s)</text>
-      {xs[1] > MAX_TRAIN_SPEED && <text x={X(Math.max(MAX_TRAIN_SPEED, xs[0])) + 5} y={H - B - 6} fill="#f5b83d" fontSize={9} fontFamily="IBM Plex Mono">OUT OF DISTRIBUTION</text>}
+      <text x={(L + W - R) / 2} y={H - 1} fill="var(--text-3)" fontSize={9} textAnchor="middle">platform speed v_p (m/s)</text>
+      {xs[1] > MAX_TRAIN_SPEED && <text x={X(Math.max(MAX_TRAIN_SPEED, xs[0])) + 5} y={H - B - 6} fill="var(--warn)" fontSize={9}>OUT OF DISTRIBUTION</text>}
       {controllers.map((c) => {
         const pts = speeds.map((v) => {
           const cell = cells.find((x) => x.controller === c && x.vp === v);
@@ -253,9 +253,9 @@ function SpeedCurve({ cells, speeds, controllers }: { cells: McCell[]; speeds: n
         const band = pts.map((p) => `${X(p.v)},${Y(p.hi)}`).join(' ') + ' ' + [...pts].reverse().map((p) => `${X(p.v)},${Y(p.lo)}`).join(' ');
         return (
           <g key={c}>
-            <polygon points={band} fill={COLORS[c]} opacity={0.12} />
-            <polyline points={pts.map((p) => `${X(p.v)},${Y(p.rate)}`).join(' ')} fill="none" stroke={COLORS[c]} strokeWidth={c === 'Res-G' ? 2.2 : 1.4} vectorEffect="non-scaling-stroke" />
-            {pts.map((p) => <circle key={p.v} cx={X(p.v)} cy={Y(p.rate)} r={2.6} fill={COLORS[c]} />)}
+            <polygon points={band} fill={CTRL_VAR[c]} opacity={0.12} />
+            <polyline points={pts.map((p) => `${X(p.v)},${Y(p.rate)}`).join(' ')} fill="none" stroke={CTRL_VAR[c]} strokeWidth={c === 'Res-G' ? 2.2 : 1.4} vectorEffect="non-scaling-stroke" />
+            {pts.map((p) => <circle key={p.v} cx={X(p.v)} cy={Y(p.rate)} r={2.6} fill={CTRL_VAR[c]} />)}
           </g>
         );
       })}
