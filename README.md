@@ -2,6 +2,8 @@
 
 **Residual Compensation of a Phenomenological Dynamic Asymmetric Ground-Effect Disturbance for UAV Landing on Moving Platforms: A Simulation Study of State-Space Safety Gating**
 
+**Live web lab:** https://ravideo9021.github.io/DAGE-Bench/
+
 A pure-Python simulation benchmark implementing the methods described in the accompanying research paper. DAGE-Bench provides a fully reproducible evaluation framework for comparing classical and learning-augmented controllers for UAV precision landing under dynamic asymmetric ground-effect (DAGE) disturbances.
 
 ---
@@ -242,7 +244,7 @@ print(f"RMS roll: {r.rms_phi_mean:.4f} rad")
 
 ### Interactive flight console
 
-`dashboard/` contains a browser console that runs this benchmark live: the plant, all five controllers and the trained residual network, ported to TypeScript and verified against NumPy at boot. It includes a real-time 3D landing view, a multi-threaded Monte Carlo runner that reproduces Table III/IV, a live network inspector, and gate and disturbance-model explorers.
+`dashboard/` contains a browser lab, live at https://ravideo9021.github.io/DAGE-Bench/, that runs this benchmark: the plant, all five controllers and the trained residual network, ported to TypeScript and verified against NumPy at boot. It includes a real-time 3D landing view, a multi-threaded Monte Carlo runner that reproduces Table III/IV, a live network inspector, and gate and disturbance-model explorers.
 
 ```bash
 cd dashboard && npm install && npm run dev

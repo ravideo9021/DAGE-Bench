@@ -1,0 +1,42 @@
+name: Deploy web lab
+
+# Builds dashboard/ and publishes it to the gh-pages branch, which GitHub
+# Pages serves at https://ravideo9021.github.io/DAGE-Bench/
+on:
+  push:
+    branches: [main]
+    paths: ['dashboard/**', '.github/workflows/deploy-site.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run validate -- 40
+      - run: npm run build
+      - run: cp dist/index.html dist/404.html && touch dist/.nojekyll
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dashboard/dist
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: Deploy web lab

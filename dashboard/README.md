@@ -1,5 +1,7 @@
 # DAGE-Bench Lab
 
+**Live:** https://ravideo9021.github.io/DAGE-Bench/
+
 An interactive web console for DAGE-Bench. It runs the actual research system in the browser: a TypeScript port of the reduced-order DAGE plant, the PD / PID / PID+DOB / residual controllers, and the trained 7,906-parameter residual MLP (weights exported from `results/residual_model.npz`). Nothing in the simulation is mocked. Every trajectory, inference, gate decision and Monte Carlo statistic is computed live.
 
 ```bash
@@ -55,5 +57,9 @@ scripts/
   export_model.py # re-export weights + reference vectors after retraining
   validate.ts     # TS-vs-Python parity and Monte Carlo reproduction check
 ```
+
+## Deployment
+
+`.github/workflows/deploy-site.yml` lints, validates and builds this folder on every push to `main` that touches `dashboard/`, then publishes `dist/` to the `gh-pages` branch, which GitHub Pages serves. It can also be run by hand from the Actions tab.
 
 After retraining (`dage train`), refresh the weights with `npm run export-model`. This needs NumPy and is run from `dashboard/`.

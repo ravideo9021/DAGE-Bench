@@ -317,6 +317,7 @@ npm run validate         # compare the TypeScript port with NumPy and the paper
 npm run export-model     # refresh weights after retraining (needs NumPy)
 npm run build            # static site in dashboard/dist`}</Code>
           <p>The port matches the NumPy forward pass to 4e-16 and the RK4 step exactly. Its random number generator differs from NumPy's, so individual trials differ while the statistics agree.</p>
+          <p>The live site is published from the <code>gh-pages</code> branch. The <code>Deploy web lab</code> workflow lints, validates and rebuilds it on every push to <code>main</code> that touches <code>dashboard/</code>.</p>
         </section>
 
         <section id="doc-structure">
